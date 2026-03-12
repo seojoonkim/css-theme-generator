@@ -16,6 +16,8 @@ interface Theme {
   name?: string;
 }
 
+type IframeLoadState = 'idle' | 'loading' | 'success' | 'error';
+
 // 기본 테마 프리셋
 const DEFAULT_PRESETS: Theme[] = [
   {
@@ -232,6 +234,7 @@ export default function ThemeGenerator() {
   const [targetUrl, setTargetUrl] = useState<string>('');
   const [livePreviewActive, setLivePreviewActive] = useState<boolean>(false);
   const [presets, setPresets] = useState<Theme[]>(DEFAULT_PRESETS);
+  const [iframeLoadState, setIframeLoadState] = useState<IframeLoadState>('idle');
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // CSS 코드 생성
@@ -264,12 +267,24 @@ export default function ThemeGenerator() {
     }
     
     setLivePreviewActive(true);
+    setIframeLoadState('loading');
   }, [targetUrl]);
 
   // iframe 로드 완료 시 CSS 주입
   const handleIframeLoad = useCallback(() => {
-    injectCssToIframe(currentTheme);
+    try {
+      setIframeLoadState('success');
+      injectCssToIframe(currentTheme);
+    } catch (error) {
+      setIframeLoadState('error');
+      console.error('Error loading iframe:', error);
+    }
   }, [currentTheme, injectCssToIframe]);
+
+  // iframe 로드 에러
+  const handleIframeError = useCallback(() => {
+    setIframeLoadState('error');
+  }, []);
 
   // 테마 선택 시
   const handleThemeSelect = useCallback((theme: Theme) => {
@@ -286,21 +301,11 @@ export default function ThemeGenerator() {
   }, [presets, handleThemeSelect]);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg p-4 text-white">
-        <h1 className="text-3xl font-bold text-center">
-          🎨 CSS Theme Generator v2
-        </h1>
-        <p className="text-center text-sm mt-1 opacity-90">
-          Select a theme preset and watch it apply in real-time
-        </p>
-      </div>
-
+    <div className="w-screen h-screen bg-gray-100 flex overflow-hidden">
       {/* Main Content: Left 15% | Right 85% */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex w-full h-full">
         {/* Left Panel: Theme Presets (15%) */}
-        <div className="w-1/6 bg-white border-r border-gray-300 overflow-y-auto p-3 space-y-3">
+        <div className="w-[15%] bg-white border-r border-gray-300 overflow-y-auto p-3 space-y-3">
           {/* URL Input Section */}
           <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 sticky top-0">
             <h3 className="text-sm font-bold mb-2 text-gray-800">🌐 Live Preview</h3>
@@ -357,7 +362,7 @@ export default function ThemeGenerator() {
         </div>
 
         {/* Right Panel: Preview/Live (85%) */}
-        <div className="flex-1 bg-gray-50 overflow-hidden flex flex-col p-4">
+        <div className="w-[85%] bg-gray-50 overflow-hidden flex flex-col p-4">
           {!livePreviewActive ? (
             /* Static Preview Mode */
             <div className="flex-1 bg-white rounded-lg shadow-lg overflow-y-auto p-6">
@@ -464,30 +469,72 @@ export default function ThemeGenerator() {
             <div className="flex-1 bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
               <div className="bg-gray-100 px-4 py-2 border-b border-gray-200 flex justify-between items-center">
                 <p className="text-sm font-semibold text-gray-800">
-                  📱 Live: <span className="text-blue-600">{targetUrl}</span>
+                  📱 Live: <span className="text-blue-600 truncate">{targetUrl}</span>
                 </p>
                 <span
                   style={{
                     backgroundColor: currentTheme.primaryColor,
                   }}
-                  className="text-white text-xs px-2 py-1 rounded font-bold"
+                  className="text-white text-xs px-2 py-1 rounded font-bold ml-2 whitespace-nowrap"
                 >
                   {currentTheme.name}
                 </span>
               </div>
-              <div className="flex-1 overflow-hidden">
-                <iframe
-                  ref={iframeRef}
-                  src={targetUrl}
-                  title="Live Preview"
-                  className="w-full h-full border-0"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock"
-                  onLoad={handleIframeLoad}
-                />
-              </div>
-              <div className="bg-yellow-50 px-4 py-2 border-t border-gray-200 text-xs text-gray-600">
-                ⚠️ Some websites may block iframe loading due to CORS/X-Frame-Options headers.
-              </div>
+              
+              {/* Loading State */}
+              {iframeLoadState === 'loading' && (
+                <div className="flex-1 flex items-center justify-center bg-gray-50">
+                  <div className="text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 mb-4 rounded-full bg-blue-100">
+                      <div className="w-8 h-8 border-4 border-blue-300 border-t-blue-600 rounded-full animate-spin"></div>
+                    </div>
+                    <p className="text-gray-600 font-semibold">Loading website...</p>
+                    <p className="text-xs text-gray-500 mt-1">This may take a few moments</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Error State */}
+              {iframeLoadState === 'error' && (
+                <div className="flex-1 flex items-center justify-center bg-red-50">
+                  <div className="text-center px-6">
+                    <div className="text-4xl mb-3">🚫</div>
+                    <p className="text-gray-800 font-semibold mb-2">Unable to Load Website</p>
+                    <p className="text-sm text-gray-600 mb-4">
+                      This website may have blocked iframe access for security reasons (CORS/X-Frame-Options).
+                    </p>
+                    <p className="text-xs text-gray-500 bg-yellow-100 rounded p-3">
+                      💡 Try websites like: naver.com, wikipedia.org, or your own website
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Success State */}
+              {iframeLoadState === 'success' && (
+                <div className="flex-1 overflow-hidden">
+                  <iframe
+                    ref={iframeRef}
+                    src={targetUrl}
+                    title="Live Preview"
+                    className="w-full h-full border-0"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-top-navigation"
+                    onLoad={handleIframeLoad}
+                    onError={handleIframeError}
+                  />
+                </div>
+              )}
+
+              {/* Always show iframe for loading (hidden initially) */}
+              <iframe
+                ref={iframeRef}
+                src={iframeLoadState === 'idle' ? '' : targetUrl}
+                title="Live Preview"
+                className={`w-full h-full border-0 ${iframeLoadState !== 'success' ? 'hidden' : ''}`}
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-top-navigation"
+                onLoad={handleIframeLoad}
+                onError={handleIframeError}
+              />
             </div>
           )}
         </div>
