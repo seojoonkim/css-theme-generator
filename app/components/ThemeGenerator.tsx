@@ -173,29 +173,37 @@ input[type="range"] {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 text-center text-gray-800">
-          🎨 CSS Theme Generator
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      {/* Header */}
+      <div className="bg-white shadow-md p-4 border-b border-gray-200">
+        <h1 className="text-3xl font-bold text-center text-gray-800">
+          🎨 CSS Theme Generator v2
         </h1>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left: Controls */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white rounded-lg shadow-lg p-6">
+      </div>
+
+      {/* Main Content: Left 15% | Right 85% */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Panel: Controls (15%) */}
+        <div className="w-1/6 bg-white border-r border-gray-300 overflow-y-auto p-3">
+          <div className="space-y-3">
+            {/* Controls Section */}
+            <div className="bg-gray-50 rounded p-3 border border-gray-200">
+              <h3 className="text-sm font-bold mb-3 text-gray-800">⚙️ Theme Controls</h3>
               <Controls theme={theme} onThemeChange={handleThemeChange} />
-              <button
-                onClick={handleGenerateNewTheme}
-                className="w-full mt-8 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold py-3 px-6 rounded-lg hover:shadow-lg transition-all"
-              >
-                ✨ Generate New Theme
-              </button>
             </div>
 
+            {/* Generate Theme Button */}
+            <button
+              onClick={handleGenerateNewTheme}
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold py-2 px-3 rounded text-sm hover:shadow-lg transition-all"
+            >
+              ✨ Random Theme
+            </button>
+
             {/* Live Preview URL Input */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h3 className="text-lg font-bold mb-4 text-gray-800">🌐 Live Preview</h3>
-              <div className="space-y-3">
+            <div className="bg-gray-50 rounded p-3 border border-gray-200">
+              <h3 className="text-sm font-bold mb-2 text-gray-800">🌐 Live Preview</h3>
+              <div className="space-y-2">
                 <input
                   type="text"
                   placeholder="https://example.com"
@@ -206,11 +214,11 @@ input[type="range"] {
                       handleLoadLivePreview();
                     }
                   }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
                   onClick={handleLoadLivePreview}
-                  className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-all"
+                  className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded text-xs transition-all"
                 >
                   Load Website
                 </button>
@@ -220,51 +228,71 @@ input[type="range"] {
                       setLivePreviewActive(false);
                       setTargetUrl('');
                     }}
-                    className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-all"
+                    className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded text-xs transition-all"
                   >
                     Close Preview
                   </button>
                 )}
               </div>
-              <p className="text-xs text-gray-500 mt-3">
-                💡 Enter any website URL to test your theme. CSS will be injected in real-time!
+              <p className="text-xs text-gray-500 mt-2">
+                💡 Enter any URL to test theme. CSS injected in real-time!
               </p>
             </div>
-          </div>
 
-          {/* Middle/Right: Preview + Code */}
-          <div className="lg:col-span-2 space-y-6">
-            {!livePreviewActive ? (
-              <>
-                <Preview theme={theme} />
-                <div className="bg-white rounded-lg shadow-lg p-6">
-                  <h2 className="text-xl font-bold mb-4 text-gray-800">Generated CSS</h2>
-                  <pre className="bg-gray-900 text-green-400 p-4 rounded overflow-x-auto text-xs leading-relaxed max-h-96 overflow-y-auto">
-                    <code>{cssCode}</code>
-                  </pre>
-                </div>
-              </>
-            ) : (
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h2 className="text-xl font-bold mb-4 text-gray-800">Live Preview: {targetUrl}</h2>
-                <div className="relative w-full bg-gray-100 rounded border border-gray-300 overflow-hidden">
-                  <iframe
-                    ref={iframeRef}
-                    src={targetUrl}
-                    title="Live Preview"
-                    className="w-full h-96 border-0"
-                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                    onLoad={() => {
-                      injectCssToIframe();
-                    }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-3">
-                  ⚠️ Some websites may block iframe loading due to CORS/X-Frame-Options headers.
-                </p>
+            {/* CSS Code Preview (when not in live preview) */}
+            {!livePreviewActive && (
+              <div className="bg-gray-50 rounded p-3 border border-gray-200">
+                <h3 className="text-xs font-bold mb-2 text-gray-800">Generated CSS</h3>
+                <pre className="bg-gray-900 text-green-400 p-2 rounded overflow-x-auto text-xs leading-relaxed max-h-48 overflow-y-auto font-mono">
+                  <code>{cssCode.substring(0, 300)}...</code>
+                </pre>
               </div>
             )}
           </div>
+        </div>
+
+        {/* Right Panel: Preview/Live (85%) */}
+        <div className="flex-1 bg-gray-50 overflow-hidden flex flex-col p-4">
+          {!livePreviewActive ? (
+            <>
+              {/* Default Preview */}
+              <div className="flex-1 bg-white rounded-lg shadow-lg overflow-y-auto">
+                <Preview theme={theme} />
+              </div>
+
+              {/* Full CSS Code Display */}
+              <div className="mt-4 bg-white rounded-lg shadow-lg p-4 max-h-64 overflow-y-auto">
+                <h2 className="text-lg font-bold mb-3 text-gray-800">Generated CSS Code</h2>
+                <pre className="bg-gray-900 text-green-400 p-4 rounded overflow-x-auto text-xs leading-relaxed font-mono">
+                  <code>{cssCode}</code>
+                </pre>
+              </div>
+            </>
+          ) : (
+            /* Live Preview Mode */
+            <div className="flex-1 bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
+              <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
+                <p className="text-sm font-semibold text-gray-800">
+                  📱 Live Preview: <span className="text-blue-600">{targetUrl}</span>
+                </p>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <iframe
+                  ref={iframeRef}
+                  src={targetUrl}
+                  title="Live Preview"
+                  className="w-full h-full border-0"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock"
+                  onLoad={() => {
+                    injectCssToIframe();
+                  }}
+                />
+              </div>
+              <div className="bg-yellow-50 px-4 py-2 border-t border-gray-200 text-xs text-gray-600">
+                ⚠️ Some websites may block iframe loading due to CORS/X-Frame-Options headers.
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
