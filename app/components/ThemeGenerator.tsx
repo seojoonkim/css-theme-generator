@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
+import { flushSync } from 'react-dom';
 import ThemePresets from './ThemePresets';
 
 interface Theme {
@@ -245,7 +246,10 @@ export default function ThemeGenerator() {
   // 테마 변경 시 iframe에 CSS 주입 (contentWindow 사용)
   const injectCssToIframe = useCallback((theme: Theme) => {
     try {
-      if (!iframeRef.current) return;
+      if (!iframeRef.current) {
+        console.warn('iframe not mounted yet');
+        return;
+      }
 
       const iframe = iframeRef.current;
       const doc = iframe.contentDocument || iframe.contentWindow?.document;
@@ -255,23 +259,25 @@ export default function ThemeGenerator() {
         return;
       }
 
-      const styleId = 'raon-theme-style';
-      let styleElement = doc.getElementById(styleId) as HTMLStyleElement | null;
-      
-      if (!styleElement) {
-        styleElement = doc.createElement('style');
-        styleElement.id = styleId;
-        styleElement.type = 'text/css';
-        // head가 없으면 만들기
-        if (!doc.head) {
-          const head = doc.createElement('head');
-          doc.insertBefore(head, doc.firstChild);
+      flushSync(() => {
+        const styleId = 'raon-theme-style';
+        let styleElement = doc.getElementById(styleId) as HTMLStyleElement | null;
+        
+        if (!styleElement) {
+          styleElement = doc.createElement('style');
+          styleElement.id = styleId;
+          styleElement.type = 'text/css';
+          // head가 없으면 만들기
+          if (!doc.head) {
+            const head = doc.createElement('head');
+            doc.insertBefore(head, doc.firstChild);
+          }
+          doc.head.appendChild(styleElement);
         }
-        doc.head.appendChild(styleElement);
-      }
-      
-      const cssCode = generateCSSCode(theme);
-      styleElement.textContent = cssCode;
+        
+        const cssCode = generateCSSCode(theme);
+        styleElement.textContent = cssCode;
+      });
       
       console.log('✅ CSS injected successfully:', theme.name);
     } catch (error) {
@@ -280,71 +286,138 @@ export default function ThemeGenerator() {
   }, []);
 
   // 웹사이트 로드 및 CSS 분석 (프록시 기반)
+  // 펫칭한 HTML을 저장할 상태
+  const [pendingHtml, setPendingHtml] = useState<{html: string; cssCode: string} | null>(null);
+
+  // ✨ callback ref로 iframe DOM 연결 확인 + useLayoutEffect로 동기 주입
+  const setIframeRef = useCallback((iframe: HTMLIFrameElement | null) => {
+    if (!iframe) return;
+    
+    // iframe이 DOM에 마운트된 것을 확인함
+    console.log('📌 iframe mounted to DOM');
+    (iframeRef as any).current = iframe;
+    
+    // 다음 렌더링 사이클에서 pendingHtml 처리
+    if (pendingHtml) {
+      setTimeout(() => {
+        console.log('⏳ Processing pendingHtml after iframe mount');
+        injectPendingHtml(iframe, pendingHtml);
+      }, 0);
+    }
+  }, [pendingHtml]);
+
+  // HTML 주입 헬퍼 함수
+  const injectPendingHtml = useCallback((iframe: HTMLIFrameElement, pending: {html: string; cssCode: string}) => {
+    try {
+      console.log('💉 Injecting HTML into iframe');
+      let htmlWithCSS = pending.html;
+      
+      if (htmlWithCSS.includes('</head>')) {
+        htmlWithCSS = htmlWithCSS.replace(
+          /<\/head>/i,
+          `<style id="raon-theme-style">${pending.cssCode}</style></head>`
+        );
+      } else if (htmlWithCSS.includes('<body')) {
+        htmlWithCSS = htmlWithCSS.replace(
+          /<body/i,
+          `<head><style id="raon-theme-style">${pending.cssCode}</style></head><body`
+        );
+      } else {
+        htmlWithCSS = `<html><head><style id="raon-theme-style">${pending.cssCode}</style></head><body>${htmlWithCSS}</body></html>`;
+      }
+      
+      flushSync(() => {
+        iframe.srcdoc = htmlWithCSS;
+      });
+      
+      console.log('✅ HTML injected successfully');
+      setIframeLoadState('success');
+      setPendingHtml(null);
+    } catch (error) {
+      console.error('❌ HTML injection failed:', error);
+      setIframeLoadState('error');
+    }
+  }, []);
+
+  // pendingHtml 변경 시 주입 (iframe이 있다면)
+  useLayoutEffect(() => {
+    if (iframeRef.current && pendingHtml) {
+      console.log('🔄 useLayoutEffect: injecting pending HTML');
+      // iframe이 이미 마운트된 경우
+      setTimeout(() => {
+        injectPendingHtml(iframeRef.current!, pendingHtml);
+      }, 0);
+    }
+  }, [pendingHtml, injectPendingHtml]);
+
   const handleLoadLivePreview = useCallback(async () => {
+    console.log('🔍 handleLoadLivePreview called');
     if (!targetUrl.trim()) {
       alert('Please enter a target URL');
       return;
     }
     
+    // URL에 프로토콜이 없으면 https:// 추가
+    let finalUrl = targetUrl.trim();
+    if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+      finalUrl = 'https://' + finalUrl;
+    }
+    
+    console.log('📱 Setting livePreviewActive=true, loadState=loading');
     setLivePreviewActive(true);
     setIframeLoadState('loading');
 
     try {
+      console.log('🌐 Fetching:', finalUrl);
       // 프록시 API를 통해 HTML fetch
       const response = await fetch('/api/proxy-website', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url: targetUrl }),
+        body: JSON.stringify({ url: finalUrl }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Proxy error:', errorData);
+        console.error('❌ Proxy error:', errorData);
         setIframeLoadState('error');
         return;
       }
 
       const data = await response.json();
       if (!data.success) {
+        console.error('❌ API returned success=false');
         setIframeLoadState('error');
         return;
       }
 
-      // HTML을 iframe에 직접 주입 (CSS 포함)
-      if (iframeRef.current?.contentDocument) {
-        const doc = iframeRef.current.contentDocument;
-        const cssCode = generateCSSCode(currentTheme);
-        
-        // HTML에 CSS 스타일 삽입
-        const htmlWithCSS = data.html.replace(
-          /<\/head>/i,
-          `<style id="raon-theme-style">${cssCode}</style></head>`
-        ) || `<html><head><style id="raon-theme-style">${cssCode}</style></head><body></body></html>`;
-        
-        doc.open();
-        doc.write(htmlWithCSS);
-        doc.close();
-
-        setIframeLoadState('success');
-      }
+      console.log('✅ HTML received, size:', data.html?.length);
+      
+      // CSS 코드 생성
+      const cssCode = generateCSSCode(currentTheme);
+      
+      // 펫칭된 HTML과 CSS를 상태에 저장
+      // useEffect에서 iframe이 렌더링된 후 주입됨
+      setPendingHtml({ html: data.html, cssCode });
     } catch (error) {
-      console.error('Failed to load website:', error);
+      console.error('❌ Failed to load website:', error);
       setIframeLoadState('error');
     }
-  }, [targetUrl, currentTheme, injectCssToIframe]);
+  }, [targetUrl, currentTheme]);
 
   // iframe 로드 완료 시 CSS 주입
   const handleIframeLoad = useCallback(() => {
     try {
-      if (iframeLoadState === 'success') {
-        injectCssToIframe(currentTheme);
+      if (livePreviewActive) {
+        // srcdoc으로 로드된 iframe이 load 이벤트를 발생시킬 때
+        setIframeLoadState('success');
+        console.log('✅ iframe loaded successfully');
       }
     } catch (error) {
       console.error('Error loading iframe:', error);
     }
-  }, [iframeLoadState, currentTheme, injectCssToIframe]);
+  }, [livePreviewActive]);
 
   // iframe 로드 에러
   const handleIframeError = useCallback(() => {
@@ -602,27 +675,18 @@ export default function ThemeGenerator() {
                 </div>
               )}
 
-              {/* Success State */}
+              {/* Success State - Single iframe */}
               {iframeLoadState === 'success' && (
                 <div className="flex-1 overflow-hidden relative">
                   <iframe
-                    ref={iframeRef}
+                    ref={setIframeRef}
                     title="Live Preview"
                     className="w-full h-full border-0"
+                    onLoad={handleIframeLoad}
                     onError={handleIframeError}
                     // ⚠️ sandbox 없음 - CSS 주입을 위해 필요
                   />
                 </div>
-              )}
-
-              {/* Hidden iframe for DOM manipulation */}
-              {iframeLoadState !== 'idle' && (
-                <iframe
-                  ref={iframeRef}
-                  title="Live Preview Container"
-                  className="hidden"
-                  // sandbox 속성 없음 - CSS 주입을 위해 필요
-                />
               )}
             </div>
           )}
