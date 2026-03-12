@@ -259,7 +259,7 @@ export default function ThemeGenerator() {
     }
   }, []);
 
-  // 웹사이트 로드 및 CSS 분석
+  // 웹사이트 로드 및 CSS 분석 (프록시 기반)
   const handleLoadLivePreview = useCallback(async () => {
     if (!targetUrl.trim()) {
       alert('Please enter a target URL');
@@ -268,23 +268,64 @@ export default function ThemeGenerator() {
     
     setLivePreviewActive(true);
     setIframeLoadState('loading');
-  }, [targetUrl]);
+
+    try {
+      // 프록시 API를 통해 HTML fetch
+      const response = await fetch('/api/proxy-website', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: targetUrl }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Proxy error:', errorData);
+        setIframeLoadState('error');
+        return;
+      }
+
+      const data = await response.json();
+      if (!data.success) {
+        setIframeLoadState('error');
+        return;
+      }
+
+      // HTML을 iframe에 직접 주입
+      if (iframeRef.current?.contentDocument) {
+        const doc = iframeRef.current.contentDocument;
+        doc.open();
+        doc.write(data.html);
+        doc.close();
+
+        // CSS 주입
+        injectCssToIframe(currentTheme);
+        setIframeLoadState('success');
+      }
+    } catch (error) {
+      console.error('Failed to load website:', error);
+      setIframeLoadState('error');
+    }
+  }, [targetUrl, currentTheme, injectCssToIframe]);
 
   // iframe 로드 완료 시 CSS 주입
   const handleIframeLoad = useCallback(() => {
     try {
-      setIframeLoadState('success');
-      injectCssToIframe(currentTheme);
+      if (iframeLoadState === 'success') {
+        injectCssToIframe(currentTheme);
+      }
     } catch (error) {
-      setIframeLoadState('error');
       console.error('Error loading iframe:', error);
     }
-  }, [currentTheme, injectCssToIframe]);
+  }, [iframeLoadState, currentTheme, injectCssToIframe]);
 
   // iframe 로드 에러
   const handleIframeError = useCallback(() => {
-    setIframeLoadState('error');
-  }, []);
+    if (iframeLoadState !== 'success') {
+      setIframeLoadState('error');
+    }
+  }, [iframeLoadState]);
 
   // 테마 선택 시
   const handleThemeSelect = useCallback((theme: Theme) => {
@@ -467,10 +508,15 @@ export default function ThemeGenerator() {
           ) : (
             /* Live Preview Mode */
             <div className="flex-1 bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
-              <div className="bg-gray-100 px-4 py-2 border-b border-gray-200 flex justify-between items-center">
-                <p className="text-sm font-semibold text-gray-800">
-                  📱 Live: <span className="text-blue-600 truncate">{targetUrl}</span>
-                </p>
+              <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-white">
+                    📱 Live Preview
+                  </p>
+                  <span className="text-white text-xs px-2 py-0.5 bg-white/20 rounded truncate max-w-xs">
+                    {targetUrl}
+                  </span>
+                </div>
                 <span
                   style={{
                     backgroundColor: currentTheme.primaryColor,
@@ -483,58 +529,71 @@ export default function ThemeGenerator() {
               
               {/* Loading State */}
               {iframeLoadState === 'loading' && (
-                <div className="flex-1 flex items-center justify-center bg-gray-50">
+                <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-blue-50 to-purple-50">
                   <div className="text-center">
-                    <div className="inline-flex items-center justify-center w-12 h-12 mb-4 rounded-full bg-blue-100">
-                      <div className="w-8 h-8 border-4 border-blue-300 border-t-blue-600 rounded-full animate-spin"></div>
+                    <div className="inline-flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-blue-100">
+                      <div className="w-12 h-12 border-4 border-blue-300 border-t-blue-600 rounded-full animate-spin"></div>
                     </div>
-                    <p className="text-gray-600 font-semibold">Loading website...</p>
-                    <p className="text-xs text-gray-500 mt-1">This may take a few moments</p>
+                    <p className="text-gray-700 font-semibold text-lg mb-1">Loading website...</p>
+                    <p className="text-sm text-gray-500 mb-4">Server is fetching content (max 10 seconds)</p>
+                    <div className="w-48 h-1 bg-gray-200 rounded-full mx-auto overflow-hidden">
+                      <div className="h-full bg-blue-500 rounded-full animate-pulse"></div>
+                    </div>
                   </div>
                 </div>
               )}
 
               {/* Error State */}
               {iframeLoadState === 'error' && (
-                <div className="flex-1 flex items-center justify-center bg-red-50">
-                  <div className="text-center px-6">
-                    <div className="text-4xl mb-3">🚫</div>
-                    <p className="text-gray-800 font-semibold mb-2">Unable to Load Website</p>
+                <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-red-50 to-orange-50">
+                  <div className="text-center px-6 max-w-md">
+                    <div className="text-5xl mb-4">⚠️</div>
+                    <p className="text-gray-800 font-bold text-lg mb-2">Unable to Load Website</p>
                     <p className="text-sm text-gray-600 mb-4">
-                      This website may have blocked iframe access for security reasons (CORS/X-Frame-Options).
+                      This could be due to:
                     </p>
-                    <p className="text-xs text-gray-500 bg-yellow-100 rounded p-3">
-                      💡 Try websites like: naver.com, wikipedia.org, or your own website
+                    <ul className="text-xs text-gray-600 text-left bg-yellow-100 rounded-lg p-3 mb-4 space-y-1">
+                      <li>✗ Website took too long to respond (10s timeout)</li>
+                      <li>✗ Server returned an error</li>
+                      <li>✗ Network connectivity issue</li>
+                    </ul>
+                    <p className="text-xs text-gray-500 bg-blue-100 rounded-lg p-3">
+                      💡 Try: google.com, wikipedia.org, or your own website
                     </p>
+                    <button
+                      onClick={() => {
+                        setIframeLoadState('idle');
+                        setTargetUrl('');
+                      }}
+                      className="mt-4 bg-gray-600 hover:bg-gray-700 text-white text-xs px-4 py-2 rounded transition-all"
+                    >
+                      Try Another URL
+                    </button>
                   </div>
                 </div>
               )}
 
               {/* Success State */}
               {iframeLoadState === 'success' && (
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-hidden relative">
                   <iframe
                     ref={iframeRef}
-                    src={targetUrl}
                     title="Live Preview"
                     className="w-full h-full border-0"
-                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-top-navigation"
-                    onLoad={handleIframeLoad}
                     onError={handleIframeError}
                   />
                 </div>
               )}
 
-              {/* Always show iframe for loading (hidden initially) */}
-              <iframe
-                ref={iframeRef}
-                src={iframeLoadState === 'idle' ? '' : targetUrl}
-                title="Live Preview"
-                className={`w-full h-full border-0 ${iframeLoadState !== 'success' ? 'hidden' : ''}`}
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-top-navigation"
-                onLoad={handleIframeLoad}
-                onError={handleIframeError}
-              />
+              {/* Hidden iframe for DOM manipulation */}
+              {iframeLoadState !== 'idle' && (
+                <iframe
+                  ref={iframeRef}
+                  title="Live Preview Container"
+                  className="hidden"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock"
+                />
+              )}
             </div>
           )}
         </div>
