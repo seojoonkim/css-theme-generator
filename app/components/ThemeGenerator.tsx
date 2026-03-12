@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
-import Preview from './Preview';
-import Controls from './Controls';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import ThemePresets from './ThemePresets';
 
 interface Theme {
   primaryColor: string;
@@ -14,52 +13,136 @@ interface Theme {
   shadowIntensity: number;
   spacing: number;
   fontFamily: string;
+  name?: string;
 }
 
-const generateRandomColor = () => {
-  const colors = [
-    '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
-    '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B88B', '#52C0A1',
-    '#E74C3C', '#3498DB', '#2ECC71', '#F39C12', '#9B59B6',
-  ];
-  return colors[Math.floor(Math.random() * colors.length)];
-};
+// 기본 테마 프리셋
+const DEFAULT_PRESETS: Theme[] = [
+  {
+    name: 'Ocean Blue',
+    primaryColor: '#0077BE',
+    secondaryColor: '#00D4FF',
+    backgroundColor: '#F0F9FF',
+    textColor: '#1F2937',
+    fontSize: 16,
+    borderRadius: 8,
+    shadowIntensity: 4,
+    spacing: 12,
+    fontFamily: 'Arial, sans-serif',
+  },
+  {
+    name: 'Sunset',
+    primaryColor: '#FF6B35',
+    secondaryColor: '#FFA500',
+    backgroundColor: '#FFF8F0',
+    textColor: '#2C3E50',
+    fontSize: 16,
+    borderRadius: 12,
+    shadowIntensity: 6,
+    spacing: 14,
+    fontFamily: 'Georgia, serif',
+  },
+  {
+    name: 'Forest Green',
+    primaryColor: '#2D6A4F',
+    secondaryColor: '#52B788',
+    backgroundColor: '#F1FAEE',
+    textColor: '#1B4332',
+    fontSize: 16,
+    borderRadius: 6,
+    shadowIntensity: 3,
+    spacing: 10,
+    fontFamily: 'Arial, sans-serif',
+  },
+  {
+    name: 'Purple Haze',
+    primaryColor: '#7209B7',
+    secondaryColor: '#B5179E',
+    backgroundColor: '#F8F7FF',
+    textColor: '#2A0845',
+    fontSize: 16,
+    borderRadius: 10,
+    shadowIntensity: 5,
+    spacing: 12,
+    fontFamily: 'Trebuchet MS, sans-serif',
+  },
+  {
+    name: 'Coral Reef',
+    primaryColor: '#FF006E',
+    secondaryColor: '#FF6B9D',
+    backgroundColor: '#FFF0F6',
+    textColor: '#370617',
+    fontSize: 16,
+    borderRadius: 14,
+    shadowIntensity: 6,
+    spacing: 13,
+    fontFamily: 'Arial, sans-serif',
+  },
+  {
+    name: 'Midnight',
+    primaryColor: '#1F2937',
+    secondaryColor: '#6366F1',
+    backgroundColor: '#0F172A',
+    textColor: '#E5E7EB',
+    fontSize: 16,
+    borderRadius: 8,
+    shadowIntensity: 8,
+    spacing: 12,
+    fontFamily: 'Courier New, monospace',
+  },
+  {
+    name: 'Mint Fresh',
+    primaryColor: '#06B6D4',
+    secondaryColor: '#10B981',
+    backgroundColor: '#F0FDFA',
+    textColor: '#164E63',
+    fontSize: 16,
+    borderRadius: 12,
+    shadowIntensity: 4,
+    spacing: 11,
+    fontFamily: 'Verdana, sans-serif',
+  },
+  {
+    name: 'Vintage',
+    primaryColor: '#A16207',
+    secondaryColor: '#D97706',
+    backgroundColor: '#FFFBEB',
+    textColor: '#451A03',
+    fontSize: 16,
+    borderRadius: 4,
+    shadowIntensity: 2,
+    spacing: 10,
+    fontFamily: 'Georgia, serif',
+  },
+  {
+    name: 'Neon',
+    primaryColor: '#00FFF5',
+    secondaryColor: '#FF006E',
+    backgroundColor: '#0A0E27',
+    textColor: '#FFFFFF',
+    fontSize: 16,
+    borderRadius: 16,
+    shadowIntensity: 10,
+    spacing: 15,
+    fontFamily: 'Impact, fantasy',
+  },
+  {
+    name: 'Pastel Dream',
+    primaryColor: '#F472B6',
+    secondaryColor: '#A78BFA',
+    backgroundColor: '#FDF2F8',
+    textColor: '#581C87',
+    fontSize: 16,
+    borderRadius: 20,
+    shadowIntensity: 3,
+    spacing: 13,
+    fontFamily: 'Arial, sans-serif',
+  },
+];
 
-const generateRandomFont = () => {
-  const fonts = [
-    'Georgia, serif',
-    'Courier New, monospace',
-    'Trebuchet MS, sans-serif',
-    'Verdana, sans-serif',
-    'Comic Sans MS, cursive',
-    'Arial, sans-serif',
-    'Impact, fantasy',
-  ];
-  return fonts[Math.floor(Math.random() * fonts.length)];
-};
-
-const generateRandomTheme = (): Theme => ({
-  primaryColor: generateRandomColor(),
-  secondaryColor: generateRandomColor(),
-  backgroundColor: '#FFFFFF',
-  textColor: '#333333',
-  fontSize: 16,
-  borderRadius: Math.floor(Math.random() * 20) + 4,
-  shadowIntensity: Math.floor(Math.random() * 10) + 2,
-  spacing: Math.floor(Math.random() * 10) + 8,
-  fontFamily: generateRandomFont(),
-});
-
-export default function ThemeGenerator() {
-  const [theme, setTheme] = useState<Theme>(generateRandomTheme());
-  const [cssCode, setCssCode] = useState<string>('');
-  const [targetUrl, setTargetUrl] = useState<string>('');
-  const [livePreviewActive, setLivePreviewActive] = useState<boolean>(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  const generateCSSCode = useCallback((t: Theme) => {
-    const shadowValue = `0 ${4 + t.shadowIntensity}px ${8 + t.shadowIntensity * 2}px rgba(0, 0, 0, 0.1)`;
-    const css = `/* Generated CSS Theme */
+const generateCSSCode = (t: Theme): string => {
+  const shadowValue = `0 ${4 + t.shadowIntensity}px ${8 + t.shadowIntensity * 2}px rgba(0, 0, 0, 0.1)`;
+  return `/* Generated CSS Theme: ${t.name} */
 :root {
   --primary-color: ${t.primaryColor};
   --secondary-color: ${t.secondaryColor};
@@ -72,72 +155,92 @@ export default function ThemeGenerator() {
   --font-family: ${t.fontFamily};
 }
 
-body {
+* {
+  box-sizing: border-box;
+}
+
+html, body {
   background-color: var(--bg-color);
   color: var(--text-color);
   font-family: var(--font-family);
   font-size: var(--font-size-base);
   line-height: 1.6;
+  margin: 0;
+  padding: 0;
 }
 
-button, a {
+button, a.btn, input[type="button"], input[type="submit"] {
   background-color: var(--primary-color);
   color: white;
-  padding: var(--spacing-unit);
+  padding: calc(var(--spacing-unit) * 0.75) var(--spacing-unit);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow);
   transition: all 0.3s ease;
   cursor: pointer;
   border: none;
   text-decoration: none;
+  font-family: inherit;
+  font-size: inherit;
 }
 
-button:hover {
+button:hover, a.btn:hover, input[type="button"]:hover, input[type="submit"]:hover {
   opacity: 0.9;
   transform: translateY(-2px);
   box-shadow: 0 ${8 + t.shadowIntensity * 2}px ${12 + t.shadowIntensity * 3}px rgba(0, 0, 0, 0.15);
 }
 
-.card {
+.card, [class*="card"], [class*="box"], article {
   background-color: white;
   border-radius: var(--border-radius);
-  padding: calc(var(--spacing-unit) * 2);
+  padding: calc(var(--spacing-unit) * 1.5);
   box-shadow: var(--shadow);
-  border-left: 4px solid var(--secondary-color);
+  margin-bottom: var(--spacing-unit);
 }
 
-input[type="range"] {
-  width: 100%;
-  margin: 0.5rem 0;
+h1, h2, h3, h4, h5, h6 {
+  color: var(--primary-color);
+  margin-bottom: var(--spacing-unit);
 }
 
-.slider-value {
-  background-color: var(--primary-color);
-  color: white;
-  padding: 0.25rem 0.75rem;
+input, textarea, select {
+  border: 2px solid var(--primary-color);
   border-radius: var(--border-radius);
-  font-size: 0.875rem;
-  display: inline-block;
+  padding: calc(var(--spacing-unit) * 0.5);
+  font-family: inherit;
+  font-size: inherit;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--primary-color)33;
+}
+
+a {
+  color: var(--primary-color);
+  text-decoration: underline;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: var(--secondary-color);
 }`;
-    setCssCode(css);
-  }, []);
+};
 
-  const handleThemeChange = useCallback((newTheme: Theme) => {
-    setTheme(newTheme);
-    generateCSSCode(newTheme);
-  }, [generateCSSCode]);
+export default function ThemeGenerator() {
+  const [currentTheme, setCurrentTheme] = useState<Theme>(DEFAULT_PRESETS[0]);
+  const [cssCode, setCssCode] = useState<string>('');
+  const [targetUrl, setTargetUrl] = useState<string>('');
+  const [livePreviewActive, setLivePreviewActive] = useState<boolean>(false);
+  const [presets, setPresets] = useState<Theme[]>(DEFAULT_PRESETS);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const handleGenerateNewTheme = useCallback(() => {
-    const newTheme = generateRandomTheme();
-    handleThemeChange(newTheme);
-  }, [handleThemeChange]);
+  // CSS 코드 생성
+  useEffect(() => {
+    setCssCode(generateCSSCode(currentTheme));
+  }, [currentTheme]);
 
-  // Initialize CSS code
-  if (!cssCode) {
-    generateCSSCode(theme);
-  }
-
-  const injectCssToIframe = useCallback(() => {
+  // 테마 변경 시 iframe에 CSS 주입
+  const injectCssToIframe = useCallback((theme: Theme) => {
     if (iframeRef.current && iframeRef.current.contentDocument) {
       const doc = iframeRef.current.contentDocument;
       const styleId = 'injected-theme-style';
@@ -149,10 +252,11 @@ input[type="range"] {
         doc.head.appendChild(styleElement);
       }
       
-      styleElement.textContent = cssCode;
+      styleElement.textContent = generateCSSCode(theme);
     }
-  }, [cssCode]);
+  }, []);
 
+  // 웹사이트 로드 및 CSS 분석
   const handleLoadLivePreview = useCallback(async () => {
     if (!targetUrl.trim()) {
       alert('Please enter a target URL');
@@ -160,121 +264,216 @@ input[type="range"] {
     }
     
     setLivePreviewActive(true);
-    
-    // Small delay to ensure iframe is loaded
-    setTimeout(() => {
-      injectCssToIframe();
-    }, 500);
-  }, [targetUrl, injectCssToIframe]);
+  }, [targetUrl]);
 
-  // Auto-inject CSS when theme changes (if live preview is active)
-  if (livePreviewActive) {
-    setTimeout(() => injectCssToIframe(), 100);
-  }
+  // iframe 로드 완료 시 CSS 주입
+  const handleIframeLoad = useCallback(() => {
+    injectCssToIframe(currentTheme);
+  }, [currentTheme, injectCssToIframe]);
+
+  // 테마 선택 시
+  const handleThemeSelect = useCallback((theme: Theme) => {
+    setCurrentTheme(theme);
+    if (livePreviewActive) {
+      injectCssToIframe(theme);
+    }
+  }, [livePreviewActive, injectCssToIframe]);
+
+  // Random 테마 선택
+  const handleRandomTheme = useCallback(() => {
+    const randomTheme = presets[Math.floor(Math.random() * presets.length)];
+    handleThemeSelect(randomTheme);
+  }, [presets, handleThemeSelect]);
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* Header */}
-      <div className="bg-white shadow-md p-4 border-b border-gray-200">
-        <h1 className="text-3xl font-bold text-center text-gray-800">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg p-4 text-white">
+        <h1 className="text-3xl font-bold text-center">
           🎨 CSS Theme Generator v2
         </h1>
+        <p className="text-center text-sm mt-1 opacity-90">
+          Select a theme preset and watch it apply in real-time
+        </p>
       </div>
 
       {/* Main Content: Left 15% | Right 85% */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Panel: Controls (15%) */}
-        <div className="w-1/6 bg-white border-r border-gray-300 overflow-y-auto p-3">
-          <div className="space-y-3">
-            {/* Controls Section */}
-            <div className="bg-gray-50 rounded p-3 border border-gray-200">
-              <h3 className="text-sm font-bold mb-3 text-gray-800">⚙️ Theme Controls</h3>
-              <Controls theme={theme} onThemeChange={handleThemeChange} />
-            </div>
-
-            {/* Generate Theme Button */}
-            <button
-              onClick={handleGenerateNewTheme}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold py-2 px-3 rounded text-sm hover:shadow-lg transition-all"
-            >
-              ✨ Random Theme
-            </button>
-
-            {/* Live Preview URL Input */}
-            <div className="bg-gray-50 rounded p-3 border border-gray-200">
-              <h3 className="text-sm font-bold mb-2 text-gray-800">🌐 Live Preview</h3>
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder="https://example.com"
-                  value={targetUrl}
-                  onChange={(e) => setTargetUrl(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleLoadLivePreview();
-                    }
-                  }}
-                  className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+        {/* Left Panel: Theme Presets (15%) */}
+        <div className="w-1/6 bg-white border-r border-gray-300 overflow-y-auto p-3 space-y-3">
+          {/* URL Input Section */}
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 sticky top-0">
+            <h3 className="text-sm font-bold mb-2 text-gray-800">🌐 Live Preview</h3>
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="https://example.com"
+                value={targetUrl}
+                onChange={(e) => setTargetUrl(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleLoadLivePreview();
+                  }
+                }}
+                className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={handleLoadLivePreview}
+                className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded text-xs transition-all"
+              >
+                Load Website
+              </button>
+              {livePreviewActive && (
                 <button
-                  onClick={handleLoadLivePreview}
-                  className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded text-xs transition-all"
+                  onClick={() => {
+                    setLivePreviewActive(false);
+                    setTargetUrl('');
+                  }}
+                  className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded text-xs transition-all"
                 >
-                  Load Website
+                  Close Preview
                 </button>
-                {livePreviewActive && (
-                  <button
-                    onClick={() => {
-                      setLivePreviewActive(false);
-                      setTargetUrl('');
-                    }}
-                    className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded text-xs transition-all"
-                  >
-                    Close Preview
-                  </button>
-                )}
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                💡 Enter any URL to test theme. CSS injected in real-time!
-              </p>
+              )}
             </div>
-
-            {/* CSS Code Preview (when not in live preview) */}
-            {!livePreviewActive && (
-              <div className="bg-gray-50 rounded p-3 border border-gray-200">
-                <h3 className="text-xs font-bold mb-2 text-gray-800">Generated CSS</h3>
-                <pre className="bg-gray-900 text-green-400 p-2 rounded overflow-x-auto text-xs leading-relaxed max-h-48 overflow-y-auto font-mono">
-                  <code>{cssCode.substring(0, 300)}...</code>
-                </pre>
-              </div>
-            )}
           </div>
+
+          {/* Theme Presets */}
+          <ThemePresets
+            presets={presets}
+            currentTheme={currentTheme}
+            onThemeSelect={handleThemeSelect}
+            onRandomClick={handleRandomTheme}
+          />
+
+          {/* CSS Code Preview */}
+          {!livePreviewActive && (
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+              <h3 className="text-xs font-bold mb-2 text-gray-800">Generated CSS</h3>
+              <pre className="bg-gray-900 text-green-400 p-2 rounded overflow-x-auto text-xs leading-relaxed max-h-48 overflow-y-auto font-mono">
+                <code>{cssCode.substring(0, 400)}...</code>
+              </pre>
+            </div>
+          )}
         </div>
 
         {/* Right Panel: Preview/Live (85%) */}
         <div className="flex-1 bg-gray-50 overflow-hidden flex flex-col p-4">
           {!livePreviewActive ? (
-            <>
-              {/* Default Preview */}
-              <div className="flex-1 bg-white rounded-lg shadow-lg overflow-y-auto">
-                <Preview theme={theme} />
-              </div>
+            /* Static Preview Mode */
+            <div className="flex-1 bg-white rounded-lg shadow-lg overflow-y-auto p-6">
+              <div style={{
+                backgroundColor: currentTheme.backgroundColor,
+                color: currentTheme.textColor,
+                fontFamily: currentTheme.fontFamily,
+                fontSize: `${currentTheme.fontSize}px`,
+              }} className="h-full">
+                <h1 style={{ color: currentTheme.primaryColor }} className="text-2xl font-bold mb-4">
+                  Theme Preview: {currentTheme.name}
+                </h1>
+                
+                {/* Color Palette */}
+                <div className="mb-6">
+                  <h2 className="text-lg font-bold mb-3">Color Palette</h2>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div
+                        style={{
+                          backgroundColor: currentTheme.primaryColor,
+                          borderRadius: `${currentTheme.borderRadius}px`,
+                        }}
+                        className="h-16 mb-2 shadow-lg"
+                      />
+                      <p className="text-sm font-semibold">Primary: {currentTheme.primaryColor}</p>
+                    </div>
+                    <div>
+                      <div
+                        style={{
+                          backgroundColor: currentTheme.secondaryColor,
+                          borderRadius: `${currentTheme.borderRadius}px`,
+                        }}
+                        className="h-16 mb-2 shadow-lg"
+                      />
+                      <p className="text-sm font-semibold">Secondary: {currentTheme.secondaryColor}</p>
+                    </div>
+                  </div>
+                </div>
 
-              {/* Full CSS Code Display */}
-              <div className="mt-4 bg-white rounded-lg shadow-lg p-4 max-h-64 overflow-y-auto">
-                <h2 className="text-lg font-bold mb-3 text-gray-800">Generated CSS Code</h2>
-                <pre className="bg-gray-900 text-green-400 p-4 rounded overflow-x-auto text-xs leading-relaxed font-mono">
-                  <code>{cssCode}</code>
-                </pre>
+                {/* Cards */}
+                <div className="mb-6">
+                  <h2 className="text-lg font-bold mb-3">Components</h2>
+                  <div
+                    style={{
+                      backgroundColor: 'white',
+                      borderRadius: `${currentTheme.borderRadius}px`,
+                      padding: `${currentTheme.spacing * 1.5}px`,
+                      boxShadow: `0 ${4 + currentTheme.shadowIntensity}px ${8 + currentTheme.shadowIntensity * 2}px rgba(0, 0, 0, 0.1)`,
+                    }}
+                    className="mb-3"
+                  >
+                    <h3 style={{ color: currentTheme.primaryColor }} className="font-bold mb-2">
+                      Card Example
+                    </h3>
+                    <p className="text-sm">This is how your theme looks on cards and components.</p>
+                  </div>
+                </div>
+
+                {/* Buttons */}
+                <div className="mb-6">
+                  <h2 className="text-lg font-bold mb-3">Buttons</h2>
+                  <div className="flex gap-3">
+                    <button
+                      style={{
+                        backgroundColor: currentTheme.primaryColor,
+                        borderRadius: `${currentTheme.borderRadius}px`,
+                        padding: `${currentTheme.spacing * 0.75}px ${currentTheme.spacing}px`,
+                      }}
+                      className="text-white font-bold text-sm transition-all hover:opacity-90"
+                    >
+                      Primary
+                    </button>
+                    <button
+                      style={{
+                        backgroundColor: currentTheme.secondaryColor,
+                        borderRadius: `${currentTheme.borderRadius}px`,
+                        padding: `${currentTheme.spacing * 0.75}px ${currentTheme.spacing}px`,
+                      }}
+                      className="text-white font-bold text-sm transition-all hover:opacity-90"
+                    >
+                      Secondary
+                    </button>
+                  </div>
+                </div>
+
+                {/* Typography */}
+                <div>
+                  <h2 className="text-lg font-bold mb-3">Typography</h2>
+                  <p style={{ fontSize: `${currentTheme.fontSize}px`, fontWeight: 700 }} className="mb-2">
+                    Large Text ({currentTheme.fontSize}px)
+                  </p>
+                  <p style={{ fontSize: `${currentTheme.fontSize - 2}px` }} className="text-sm mb-2">
+                    Regular Text ({currentTheme.fontSize - 2}px)
+                  </p>
+                  <p style={{ fontSize: `${currentTheme.fontSize - 4}px` }} className="text-xs opacity-75">
+                    Small Text ({currentTheme.fontSize - 4}px)
+                  </p>
+                </div>
               </div>
-            </>
+            </div>
           ) : (
             /* Live Preview Mode */
             <div className="flex-1 bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
-              <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
+              <div className="bg-gray-100 px-4 py-2 border-b border-gray-200 flex justify-between items-center">
                 <p className="text-sm font-semibold text-gray-800">
-                  📱 Live Preview: <span className="text-blue-600">{targetUrl}</span>
+                  📱 Live: <span className="text-blue-600">{targetUrl}</span>
                 </p>
+                <span
+                  style={{
+                    backgroundColor: currentTheme.primaryColor,
+                  }}
+                  className="text-white text-xs px-2 py-1 rounded font-bold"
+                >
+                  {currentTheme.name}
+                </span>
               </div>
               <div className="flex-1 overflow-hidden">
                 <iframe
@@ -283,9 +482,7 @@ input[type="range"] {
                   title="Live Preview"
                   className="w-full h-full border-0"
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock"
-                  onLoad={() => {
-                    injectCssToIframe();
-                  }}
+                  onLoad={handleIframeLoad}
                 />
               </div>
               <div className="bg-yellow-50 px-4 py-2 border-t border-gray-200 text-xs text-gray-600">
