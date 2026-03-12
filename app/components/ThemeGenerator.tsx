@@ -243,7 +243,7 @@ export default function ThemeGenerator() {
     setCssCode(generateCSSCode(currentTheme));
   }, [currentTheme]);
 
-  // 테마 변경 시 iframe에 CSS 주입 (contentWindow 사용)
+  // 테마 변경 시 iframe에 CSS 주입 (contentDocument 직접 접근)
   const injectCssToIframe = useCallback((theme: Theme) => {
     try {
       if (!iframeRef.current) {
@@ -252,36 +252,36 @@ export default function ThemeGenerator() {
       }
 
       const iframe = iframeRef.current;
-      const doc = iframe.contentDocument || iframe.contentWindow?.document;
+      // contentDocument에 직접 접근 (srcdoc는 same-origin이므로 접근 가능)
+      const doc = iframe.contentDocument;
       
       if (!doc) {
-        console.warn('Cannot access iframe document');
+        console.warn('Cannot access iframe.contentDocument');
         return;
       }
 
-      flushSync(() => {
-        const styleId = 'raon-theme-style';
-        let styleElement = doc.getElementById(styleId) as HTMLStyleElement | null;
-        
-        if (!styleElement) {
-          styleElement = doc.createElement('style');
-          styleElement.id = styleId;
-          styleElement.type = 'text/css';
-          // head가 없으면 만들기
-          if (!doc.head) {
-            const head = doc.createElement('head');
-            doc.insertBefore(head, doc.firstChild);
-          }
-          doc.head.appendChild(styleElement);
+      const styleId = 'raon-theme-style';
+      let styleElement = doc.getElementById(styleId) as HTMLStyleElement | null;
+      
+      if (!styleElement) {
+        // head가 없으면 만들기
+        if (!doc.head) {
+          const head = doc.createElement('head');
+          doc.insertBefore(head, doc.firstChild);
         }
         
-        const cssCode = generateCSSCode(theme);
-        styleElement.textContent = cssCode;
-      });
+        styleElement = doc.createElement('style');
+        styleElement.id = styleId;
+        styleElement.type = 'text/css';
+        doc.head.insertBefore(styleElement, doc.head.firstChild);
+      }
+      
+      const cssCode = generateCSSCode(theme);
+      styleElement.textContent = cssCode;
       
       console.log('✅ CSS injected successfully:', theme.name);
     } catch (error) {
-      console.warn('CSS injection failed (expected for cross-origin):', error);
+      console.error('❌ CSS injection failed:', error);
     }
   }, []);
 
@@ -289,24 +289,7 @@ export default function ThemeGenerator() {
   // 펫칭한 HTML을 저장할 상태
   const [pendingHtml, setPendingHtml] = useState<{html: string; cssCode: string} | null>(null);
 
-  // ✨ callback ref로 iframe DOM 연결 확인 + useLayoutEffect로 동기 주입
-  const setIframeRef = useCallback((iframe: HTMLIFrameElement | null) => {
-    if (!iframe) return;
-    
-    // iframe이 DOM에 마운트된 것을 확인함
-    console.log('📌 iframe mounted to DOM');
-    (iframeRef as any).current = iframe;
-    
-    // 다음 렌더링 사이클에서 pendingHtml 처리
-    if (pendingHtml) {
-      setTimeout(() => {
-        console.log('⏳ Processing pendingHtml after iframe mount');
-        injectPendingHtml(iframe, pendingHtml);
-      }, 0);
-    }
-  }, [pendingHtml]);
-
-  // HTML 주입 헬퍼 함수
+  // HTML 주입 헬퍼 함수 (먼저 정의)
   const injectPendingHtml = useCallback((iframe: HTMLIFrameElement, pending: {html: string; cssCode: string}) => {
     try {
       console.log('💉 Injecting HTML into iframe');
@@ -339,14 +322,30 @@ export default function ThemeGenerator() {
     }
   }, []);
 
+  // ✨ callback ref로 iframe DOM 연결 확인
+  const setIframeRef = useCallback((iframe: HTMLIFrameElement | null) => {
+    if (!iframe) {
+      iframeRef.current = null;
+      return;
+    }
+    
+    // iframe이 DOM에 마운트된 것을 확인하고 ref 저장
+    console.log('📌 iframe mounted to DOM');
+    iframeRef.current = iframe;
+    
+    // srcdoc이 이미 설정되어 있으면 즉시 처리
+    if (pendingHtml) {
+      console.log('⏳ pendingHtml exists, injecting...');
+      injectPendingHtml(iframe, pendingHtml);
+    }
+  }, [pendingHtml, injectPendingHtml]);
+
   // pendingHtml 변경 시 주입 (iframe이 있다면)
   useLayoutEffect(() => {
     if (iframeRef.current && pendingHtml) {
       console.log('🔄 useLayoutEffect: injecting pending HTML');
       // iframe이 이미 마운트된 경우
-      setTimeout(() => {
-        injectPendingHtml(iframeRef.current!, pendingHtml);
-      }, 0);
+      injectPendingHtml(iframeRef.current!, pendingHtml);
     }
   }, [pendingHtml, injectPendingHtml]);
 
@@ -409,15 +408,16 @@ export default function ThemeGenerator() {
   // iframe 로드 완료 시 CSS 주입
   const handleIframeLoad = useCallback(() => {
     try {
-      if (livePreviewActive) {
-        // srcdoc으로 로드된 iframe이 load 이벤트를 발생시킬 때
+      if (livePreviewActive && iframeRef.current) {
+        console.log('✅ iframe loaded, injecting current theme...');
         setIframeLoadState('success');
-        console.log('✅ iframe loaded successfully');
+        // 로드 완료 후 현재 테마의 CSS 주입
+        injectCssToIframe(currentTheme);
       }
     } catch (error) {
       console.error('Error loading iframe:', error);
     }
-  }, [livePreviewActive]);
+  }, [livePreviewActive, currentTheme, injectCssToIframe]);
 
   // iframe 로드 에러
   const handleIframeError = useCallback(() => {
@@ -429,11 +429,10 @@ export default function ThemeGenerator() {
   // 테마 선택 시
   const handleThemeSelect = useCallback((theme: Theme) => {
     setCurrentTheme(theme);
-    if (livePreviewActive && iframeLoadState === 'success') {
+    if (livePreviewActive && iframeLoadState === 'success' && iframeRef.current) {
       // 라이브 프리뷰 활성화 상태면 즉시 CSS 주입
-      setTimeout(() => {
-        injectCssToIframe(theme);
-      }, 0);
+      console.log('🎨 Theme selected, injecting CSS:', theme.name);
+      injectCssToIframe(theme);
     }
   }, [livePreviewActive, iframeLoadState, injectCssToIframe]);
 
