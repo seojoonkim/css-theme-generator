@@ -373,11 +373,11 @@ export default function ThemeGenerator() {
   return (
     <div className="w-screen h-screen bg-gray-100 flex overflow-hidden">
       {/* Main Content: Left 15% | Right 85% */}
-      <div className="flex w-full h-full">
-        {/* Left Panel: Theme Presets (15%) */}
-        <div className="w-[15%] bg-white border-r border-gray-300 overflow-y-auto p-3 space-y-3">
+      <div className="flex w-full h-full gap-0">
+        {/* Left Panel: Theme Presets (15%) - Scrollable */}
+        <div className="w-[15%] h-screen bg-white border-r border-gray-300 overflow-y-scroll overflow-x-hidden p-3 flex flex-col space-y-3">
           {/* URL Input Section */}
-          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 sticky top-0">
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 flex-shrink-0">
             <h3 className="text-sm font-bold mb-2 text-gray-800">🌐 Live Preview</h3>
             <div className="space-y-2">
               <input
@@ -422,7 +422,7 @@ export default function ThemeGenerator() {
 
           {/* CSS Code Preview */}
           {!livePreviewActive && (
-            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 flex-shrink-0">
               <h3 className="text-xs font-bold mb-2 text-gray-800">Generated CSS</h3>
               <pre className="bg-gray-900 text-green-400 p-2 rounded overflow-x-auto text-xs leading-relaxed max-h-48 overflow-y-auto font-mono">
                 <code>{cssCode.substring(0, 400)}...</code>
@@ -431,11 +431,11 @@ export default function ThemeGenerator() {
           )}
         </div>
 
-        {/* Right Panel: Preview/Live (85%) */}
-        <div className="w-[85%] bg-gray-50 overflow-hidden flex flex-col p-4">
+        {/* Right Panel: Preview/Live (85%) - Full Screen */}
+        <div className="w-[85%] h-screen bg-gray-50 overflow-hidden flex flex-col">
           {!livePreviewActive ? (
             /* Static Preview Mode */
-            <div className="flex-1 bg-white rounded-lg shadow-lg overflow-y-auto p-6">
+            <div className="flex-1 bg-white overflow-y-auto p-6">
               <div style={{
                 backgroundColor: currentTheme.backgroundColor,
                 color: currentTheme.textColor,
@@ -536,8 +536,8 @@ export default function ThemeGenerator() {
             </div>
           ) : (
             /* Live Preview Mode */
-            <div className="flex-1 bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
-              <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+            <div className="flex-1 bg-white overflow-hidden flex flex-col">
+              <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-2 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-white">
                     📱 Live Preview
