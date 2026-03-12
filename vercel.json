@@ -1,8 +1,4 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": ".next/standalone",
-  "installCommand": "npm ci",
-  "env": {
-    "NEXT_PUBLIC_APP_ENV": "production"
-  }
+  "installCommand": "npm ci"
 }
