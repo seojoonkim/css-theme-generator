@@ -140,8 +140,18 @@ Automatically generated CSS includes:
 
 ---
 
-🌍 **Live Demo:** [https://css-theme-generator.vercel.app](https://css-theme-generator.vercel.app)
+## 🚀 Deployment
 
-🔗 **Repository:** [github.com/simonkim-nft/css-theme-generator](https://github.com/simonkim-nft/css-theme-generator)
+✅ **Live Demo:** https://css-theme-generator-six.vercel.app
+
+📦 **GitHub Repository:** https://github.com/seojoonkim/css-theme-generator
+
+### Deploy Your Own
+
+Click the button below to deploy to Vercel:
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/seojoonkim/css-theme-generator)
+
+---
 
 Built with ☀️ by Raon
