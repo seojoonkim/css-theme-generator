@@ -242,20 +242,40 @@ export default function ThemeGenerator() {
     setCssCode(generateCSSCode(currentTheme));
   }, [currentTheme]);
 
-  // 테마 변경 시 iframe에 CSS 주입
+  // 테마 변경 시 iframe에 CSS 주입 (contentWindow 사용)
   const injectCssToIframe = useCallback((theme: Theme) => {
-    if (iframeRef.current && iframeRef.current.contentDocument) {
-      const doc = iframeRef.current.contentDocument;
-      const styleId = 'injected-theme-style';
+    try {
+      if (!iframeRef.current) return;
+
+      const iframe = iframeRef.current;
+      const doc = iframe.contentDocument || iframe.contentWindow?.document;
+      
+      if (!doc) {
+        console.warn('Cannot access iframe document');
+        return;
+      }
+
+      const styleId = 'raon-theme-style';
       let styleElement = doc.getElementById(styleId) as HTMLStyleElement | null;
       
       if (!styleElement) {
         styleElement = doc.createElement('style');
         styleElement.id = styleId;
+        styleElement.type = 'text/css';
+        // head가 없으면 만들기
+        if (!doc.head) {
+          const head = doc.createElement('head');
+          doc.insertBefore(head, doc.firstChild);
+        }
         doc.head.appendChild(styleElement);
       }
       
-      styleElement.textContent = generateCSSCode(theme);
+      const cssCode = generateCSSCode(theme);
+      styleElement.textContent = cssCode;
+      
+      console.log('✅ CSS injected successfully:', theme.name);
+    } catch (error) {
+      console.warn('CSS injection failed (expected for cross-origin):', error);
     }
   }, []);
 
@@ -292,15 +312,21 @@ export default function ThemeGenerator() {
         return;
       }
 
-      // HTML을 iframe에 직접 주입
+      // HTML을 iframe에 직접 주입 (CSS 포함)
       if (iframeRef.current?.contentDocument) {
         const doc = iframeRef.current.contentDocument;
+        const cssCode = generateCSSCode(currentTheme);
+        
+        // HTML에 CSS 스타일 삽입
+        const htmlWithCSS = data.html.replace(
+          /<\/head>/i,
+          `<style id="raon-theme-style">${cssCode}</style></head>`
+        ) || `<html><head><style id="raon-theme-style">${cssCode}</style></head><body></body></html>`;
+        
         doc.open();
-        doc.write(data.html);
+        doc.write(htmlWithCSS);
         doc.close();
 
-        // CSS 주입
-        injectCssToIframe(currentTheme);
         setIframeLoadState('success');
       }
     } catch (error) {
@@ -330,10 +356,13 @@ export default function ThemeGenerator() {
   // 테마 선택 시
   const handleThemeSelect = useCallback((theme: Theme) => {
     setCurrentTheme(theme);
-    if (livePreviewActive) {
-      injectCssToIframe(theme);
+    if (livePreviewActive && iframeLoadState === 'success') {
+      // 라이브 프리뷰 활성화 상태면 즉시 CSS 주입
+      setTimeout(() => {
+        injectCssToIframe(theme);
+      }, 0);
     }
-  }, [livePreviewActive, injectCssToIframe]);
+  }, [livePreviewActive, iframeLoadState, injectCssToIframe]);
 
   // Random 테마 선택
   const handleRandomTheme = useCallback(() => {
@@ -581,6 +610,7 @@ export default function ThemeGenerator() {
                     title="Live Preview"
                     className="w-full h-full border-0"
                     onError={handleIframeError}
+                    // ⚠️ sandbox 없음 - CSS 주입을 위해 필요
                   />
                 </div>
               )}
@@ -591,7 +621,7 @@ export default function ThemeGenerator() {
                   ref={iframeRef}
                   title="Live Preview Container"
                   className="hidden"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock"
+                  // sandbox 속성 없음 - CSS 주입을 위해 필요
                 />
               )}
             </div>
