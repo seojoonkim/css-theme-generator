@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import Preview from './Preview';
 import Controls from './Controls';
 
@@ -53,6 +53,9 @@ const generateRandomTheme = (): Theme => ({
 export default function ThemeGenerator() {
   const [theme, setTheme] = useState<Theme>(generateRandomTheme());
   const [cssCode, setCssCode] = useState<string>('');
+  const [targetUrl, setTargetUrl] = useState<string>('');
+  const [livePreviewActive, setLivePreviewActive] = useState<boolean>(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const generateCSSCode = useCallback((t: Theme) => {
     const shadowValue = `0 ${4 + t.shadowIntensity}px ${8 + t.shadowIntensity * 2}px rgba(0, 0, 0, 0.1)`;
@@ -134,6 +137,41 @@ input[type="range"] {
     generateCSSCode(theme);
   }
 
+  const injectCssToIframe = useCallback(() => {
+    if (iframeRef.current && iframeRef.current.contentDocument) {
+      const doc = iframeRef.current.contentDocument;
+      const styleId = 'injected-theme-style';
+      let styleElement = doc.getElementById(styleId) as HTMLStyleElement | null;
+      
+      if (!styleElement) {
+        styleElement = doc.createElement('style');
+        styleElement.id = styleId;
+        doc.head.appendChild(styleElement);
+      }
+      
+      styleElement.textContent = cssCode;
+    }
+  }, [cssCode]);
+
+  const handleLoadLivePreview = useCallback(async () => {
+    if (!targetUrl.trim()) {
+      alert('Please enter a target URL');
+      return;
+    }
+    
+    setLivePreviewActive(true);
+    
+    // Small delay to ensure iframe is loaded
+    setTimeout(() => {
+      injectCssToIframe();
+    }, 500);
+  }, [targetUrl, injectCssToIframe]);
+
+  // Auto-inject CSS when theme changes (if live preview is active)
+  if (livePreviewActive) {
+    setTimeout(() => injectCssToIframe(), 100);
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-7xl mx-auto">
@@ -141,27 +179,91 @@ input[type="range"] {
           🎨 CSS Theme Generator
         </h1>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left: Controls */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <Controls theme={theme} onThemeChange={handleThemeChange} />
-            <button
-              onClick={handleGenerateNewTheme}
-              className="w-full mt-8 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold py-3 px-6 rounded-lg hover:shadow-lg transition-all"
-            >
-              ✨ Generate New Theme
-            </button>
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <Controls theme={theme} onThemeChange={handleThemeChange} />
+              <button
+                onClick={handleGenerateNewTheme}
+                className="w-full mt-8 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold py-3 px-6 rounded-lg hover:shadow-lg transition-all"
+              >
+                ✨ Generate New Theme
+              </button>
+            </div>
+
+            {/* Live Preview URL Input */}
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <h3 className="text-lg font-bold mb-4 text-gray-800">🌐 Live Preview</h3>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="https://example.com"
+                  value={targetUrl}
+                  onChange={(e) => setTargetUrl(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleLoadLivePreview();
+                    }
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+                <button
+                  onClick={handleLoadLivePreview}
+                  className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-all"
+                >
+                  Load Website
+                </button>
+                {livePreviewActive && (
+                  <button
+                    onClick={() => {
+                      setLivePreviewActive(false);
+                      setTargetUrl('');
+                    }}
+                    className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-all"
+                  >
+                    Close Preview
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-3">
+                💡 Enter any website URL to test your theme. CSS will be injected in real-time!
+              </p>
+            </div>
           </div>
 
-          {/* Right: Preview + Code */}
-          <div className="space-y-6">
-            <Preview theme={theme} />
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-bold mb-4 text-gray-800">Generated CSS</h2>
-              <pre className="bg-gray-900 text-green-400 p-4 rounded overflow-x-auto text-xs leading-relaxed max-h-96 overflow-y-auto">
-                <code>{cssCode}</code>
-              </pre>
-            </div>
+          {/* Middle/Right: Preview + Code */}
+          <div className="lg:col-span-2 space-y-6">
+            {!livePreviewActive ? (
+              <>
+                <Preview theme={theme} />
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                  <h2 className="text-xl font-bold mb-4 text-gray-800">Generated CSS</h2>
+                  <pre className="bg-gray-900 text-green-400 p-4 rounded overflow-x-auto text-xs leading-relaxed max-h-96 overflow-y-auto">
+                    <code>{cssCode}</code>
+                  </pre>
+                </div>
+              </>
+            ) : (
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <h2 className="text-xl font-bold mb-4 text-gray-800">Live Preview: {targetUrl}</h2>
+                <div className="relative w-full bg-gray-100 rounded border border-gray-300 overflow-hidden">
+                  <iframe
+                    ref={iframeRef}
+                    src={targetUrl}
+                    title="Live Preview"
+                    className="w-full h-96 border-0"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                    onLoad={() => {
+                      injectCssToIframe();
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-3">
+                  ⚠️ Some websites may block iframe loading due to CORS/X-Frame-Options headers.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

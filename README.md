@@ -14,8 +14,14 @@ A real-time CSS theme generator with live preview, built with Next.js 14 and Rea
 - **Typography:** Font size and family selection
 - **Effects:** Border radius, shadow intensity, spacing unit
 
+🌐 **Live Website Preview** (NEW!)
+- Enter any website URL to test your theme
+- CSS is injected directly into the website preview
+- Real-time updates as you adjust your theme
+- Perfect for testing themes on actual websites
+
 📱 **Responsive Layout**
-- Left panel: Slider controls
+- Left panel: Slider controls + live preview input
 - Right panel: Live preview + CSS code display
 - Split view with perfect proportions
 
@@ -46,7 +52,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 1. **Adjust Sliders** - Change colors, fonts, effects in the left panel
 2. **See Changes Live** - Right panel updates in real-time
 3. **Generate New Theme** - Click "✨ Generate New Theme" for random themes
-4. **Copy CSS** - Select and copy the generated CSS code
+4. **Test on Real Websites** - Enter a website URL and click "Load Website" to inject your theme in real-time
+5. **Copy CSS** - Select and copy the generated CSS code
 
 ## Project Structure
 
@@ -105,6 +112,23 @@ Automatically generated CSS includes:
 - CSS variables for efficient styling
 - Optimized re-renders
 
+## Live Preview Guide
+
+### Using Live Website Preview
+
+1. **Enter Website URL** - Type `https://example.com` in the "Live Preview" section
+2. **Click "Load Website"** - The website loads in an iframe
+3. **Adjust Your Theme** - As you change sliders, the CSS is injected in real-time
+4. **See Live Results** - Watch how your theme transforms the website
+
+### Important Notes
+
+⚠️ **CORS & Security:**
+- Some websites block iframe embedding (X-Frame-Options header)
+- This is a security feature - we respect website restrictions
+- Works best with sites that allow iframe embedding
+- Local development sites and many test servers work great!
+
 ## Future Enhancements
 
 - Export theme as JSON/CSS file
@@ -112,7 +136,12 @@ Automatically generated CSS includes:
 - Theme presets (Material, Glassmorphism, Neumorphism)
 - Dark mode generator
 - Animation speed controls
+- Proxy service for CORS bypass (optional)
 
 ---
+
+🌍 **Live Demo:** [https://css-theme-generator.vercel.app](https://css-theme-generator.vercel.app)
+
+🔗 **Repository:** [github.com/simonkim-nft/css-theme-generator](https://github.com/simonkim-nft/css-theme-generator)
 
 Built with ☀️ by Raon
