@@ -14,11 +14,12 @@ A real-time CSS theme generator with live preview, built with Next.js 14 and Rea
 - **Typography:** Font size and family selection
 - **Effects:** Border radius, shadow intensity, spacing unit
 
-🌐 **Live Website Preview** (NEW!)
+🌐 **Live Website Preview** (V2 - Layout-Preserving!)
 - Enter any website URL to test your theme
-- CSS is injected directly into the website preview
-- Real-time updates as you adjust your theme
-- Perfect for testing themes on actual websites
+- CSS is injected directly into the website preview without breaking layouts
+- Real-time theme switching on live websites
+- Perfect for testing themes on actual sites like Wikipedia, news sites, etc.
+- **NEW:** Improved CSS injection that preserves original layouts ✨
 
 📱 **Responsive Layout**
 - Left panel: Slider controls + live preview input
@@ -129,6 +130,42 @@ Automatically generated CSS includes:
 - Works best with sites that allow iframe embedding
 - Local development sites and many test servers work great!
 
+## CSS Injection Strategy (V2)
+
+### How Layout Preservation Works
+
+Instead of applying CSS globally with `* { color, background }`, our v2 approach:
+
+1. **CSS Variables with Namespacing**
+   - All variables prefixed with `--raon-` to avoid conflicts
+   - Centralized color, spacing, and typography definitions
+
+2. **Selective Element Styling**
+   - Only target specific elements: buttons, links, headings, inputs
+   - Never modify layout properties (width, height, display, etc.)
+   - Uses `!important` for reliable style application
+
+3. **Non-Invasive CSS**
+   - No universal selector `*` rules
+   - No body/html layout modifications
+   - Preserves original element cascade and specificity
+
+**Result:** Original website layouts stay intact while colors transform! 🎨
+
+### Example CSS (Generated)
+```css
+:root {
+  --raon-primary-color: #FF6B35;
+  --raon-secondary-color: #FFA500;
+  /* ... */
+}
+
+/* Only colors, no layout! */
+a { color: var(--raon-primary-color) !important; }
+button { background-color: var(--raon-primary-color) !important; }
+h1, h2, h3 { color: var(--raon-primary-color) !important; }
+```
+
 ## Future Enhancements
 
 - Export theme as JSON/CSS file
@@ -136,7 +173,7 @@ Automatically generated CSS includes:
 - Theme presets (Material, Glassmorphism, Neumorphism)
 - Dark mode generator
 - Animation speed controls
-- Proxy service for CORS bypass (optional)
+- Theme sharing/community library
 
 ---
 
