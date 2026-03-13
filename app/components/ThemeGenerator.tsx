@@ -146,86 +146,64 @@ const DEFAULT_PRESETS: Theme[] = [
 const generateCSSCode = (t: Theme): string => {
   const shadowValue = `0 ${4 + t.shadowIntensity}px ${8 + t.shadowIntensity * 2}px rgba(0, 0, 0, 0.1)`;
   return `/* Generated CSS Theme: ${t.name} */
+/* 🎨 CSS 변수 정의 — 다른 CSS와 충돌 최소화 */
 :root {
-  --primary-color: ${t.primaryColor};
-  --secondary-color: ${t.secondaryColor};
-  --bg-color: ${t.backgroundColor};
-  --text-color: ${t.textColor};
-  --font-size-base: ${t.fontSize}px;
-  --border-radius: ${t.borderRadius}px;
-  --shadow: ${shadowValue};
-  --spacing-unit: ${t.spacing}px;
-  --font-family: ${t.fontFamily};
+  --raon-primary-color: ${t.primaryColor};
+  --raon-secondary-color: ${t.secondaryColor};
+  --raon-bg-color: ${t.backgroundColor};
+  --raon-text-color: ${t.textColor};
+  --raon-font-size-base: ${t.fontSize}px;
+  --raon-border-radius: ${t.borderRadius}px;
+  --raon-shadow: ${shadowValue};
+  --raon-spacing-unit: ${t.spacing}px;
+  --raon-font-family: ${t.fontFamily};
 }
 
-* {
-  box-sizing: border-box;
+/* 📌 버튼 — 색상만 변경 */
+button,
+input[type="button"],
+input[type="submit"],
+a.btn,
+[role="button"] {
+  background-color: var(--raon-primary-color) !important;
+  color: white !important;
 }
 
-html, body {
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  font-family: var(--font-family);
-  font-size: var(--font-size-base);
-  line-height: 1.6;
-  margin: 0;
-  padding: 0;
-}
-
-button, a.btn, input[type="button"], input[type="submit"] {
-  background-color: var(--primary-color);
-  color: white;
-  padding: calc(var(--spacing-unit) * 0.75) var(--spacing-unit);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
-  transition: all 0.3s ease;
-  cursor: pointer;
-  border: none;
-  text-decoration: none;
-  font-family: inherit;
-  font-size: inherit;
-}
-
-button:hover, a.btn:hover, input[type="button"]:hover, input[type="submit"]:hover {
+button:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover,
+a.btn:hover,
+[role="button"]:hover {
   opacity: 0.9;
-  transform: translateY(-2px);
-  box-shadow: 0 ${8 + t.shadowIntensity * 2}px ${12 + t.shadowIntensity * 3}px rgba(0, 0, 0, 0.15);
 }
 
-.card, [class*="card"], [class*="box"], article {
-  background-color: white;
-  border-radius: var(--border-radius);
-  padding: calc(var(--spacing-unit) * 1.5);
-  box-shadow: var(--shadow);
-  margin-bottom: var(--spacing-unit);
-}
-
-h1, h2, h3, h4, h5, h6 {
-  color: var(--primary-color);
-  margin-bottom: var(--spacing-unit);
-}
-
-input, textarea, select {
-  border: 2px solid var(--primary-color);
-  border-radius: var(--border-radius);
-  padding: calc(var(--spacing-unit) * 0.5);
-  font-family: inherit;
-  font-size: inherit;
-}
-
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--primary-color)33;
-}
-
+/* 📌 링크 — 색상만 변경 */
 a {
-  color: var(--primary-color);
-  text-decoration: underline;
-  transition: color 0.3s ease;
+  color: var(--raon-primary-color) !important;
 }
 
 a:hover {
-  color: var(--secondary-color);
+  color: var(--raon-secondary-color) !important;
+}
+
+/* 📌 헤딩 — 색상만 변경 */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--raon-primary-color) !important;
+}
+
+/* 📌 입력 필드 — 테두리 색상만 변경 */
+input:not([type="button"]):not([type="submit"]),
+textarea,
+select {
+  border-color: var(--raon-primary-color) !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  border-color: var(--raon-primary-color) !important;
+  box-shadow: 0 0 0 3px var(--raon-primary-color)33 !important;
 }`;
 };
 
@@ -273,7 +251,8 @@ export default function ThemeGenerator() {
         styleElement = doc.createElement('style');
         styleElement.id = styleId;
         styleElement.type = 'text/css';
-        doc.head.insertBefore(styleElement, doc.head.firstChild);
+        // 끝에 추가해서 기존 스타일과 섞이게 함 (우선순위는 !important로)
+        doc.head.appendChild(styleElement);
       }
       
       const cssCode = generateCSSCode(theme);
