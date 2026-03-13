@@ -19,10 +19,20 @@ interface Theme {
 
 type IframeLoadState = 'idle' | 'loading' | 'success' | 'error';
 
-// 기본 테마 프리셋
+interface LoadMetadata {
+  url: string;
+  title: string;
+  iframeBlocked?: boolean;
+  blockReason?: string;
+  xFrameOptions?: string;
+  cspPresent?: boolean;
+}
+
+// 기본 테마 프리셋 (확장: 20개+)
 const DEFAULT_PRESETS: Theme[] = [
+  // 카테고리 1: 원본 (10개)
   {
-    name: 'Ocean Blue',
+    name: '🌊 Ocean Blue',
     primaryColor: '#0077BE',
     secondaryColor: '#00D4FF',
     backgroundColor: '#F0F9FF',
@@ -34,7 +44,7 @@ const DEFAULT_PRESETS: Theme[] = [
     fontFamily: 'Arial, sans-serif',
   },
   {
-    name: 'Sunset',
+    name: '🌅 Sunset',
     primaryColor: '#FF6B35',
     secondaryColor: '#FFA500',
     backgroundColor: '#FFF8F0',
@@ -46,7 +56,7 @@ const DEFAULT_PRESETS: Theme[] = [
     fontFamily: 'Georgia, serif',
   },
   {
-    name: 'Forest Green',
+    name: '🌲 Forest Green',
     primaryColor: '#2D6A4F',
     secondaryColor: '#52B788',
     backgroundColor: '#F1FAEE',
@@ -58,7 +68,7 @@ const DEFAULT_PRESETS: Theme[] = [
     fontFamily: 'Arial, sans-serif',
   },
   {
-    name: 'Purple Haze',
+    name: '💜 Purple Haze',
     primaryColor: '#7209B7',
     secondaryColor: '#B5179E',
     backgroundColor: '#F8F7FF',
@@ -70,7 +80,7 @@ const DEFAULT_PRESETS: Theme[] = [
     fontFamily: 'Trebuchet MS, sans-serif',
   },
   {
-    name: 'Coral Reef',
+    name: '🪸 Coral Reef',
     primaryColor: '#FF006E',
     secondaryColor: '#FF6B9D',
     backgroundColor: '#FFF0F6',
@@ -82,7 +92,7 @@ const DEFAULT_PRESETS: Theme[] = [
     fontFamily: 'Arial, sans-serif',
   },
   {
-    name: 'Midnight',
+    name: '🌙 Midnight',
     primaryColor: '#1F2937',
     secondaryColor: '#6366F1',
     backgroundColor: '#0F172A',
@@ -94,7 +104,7 @@ const DEFAULT_PRESETS: Theme[] = [
     fontFamily: 'Courier New, monospace',
   },
   {
-    name: 'Mint Fresh',
+    name: '🌿 Mint Fresh',
     primaryColor: '#06B6D4',
     secondaryColor: '#10B981',
     backgroundColor: '#F0FDFA',
@@ -106,7 +116,7 @@ const DEFAULT_PRESETS: Theme[] = [
     fontFamily: 'Verdana, sans-serif',
   },
   {
-    name: 'Vintage',
+    name: '📖 Vintage',
     primaryColor: '#A16207',
     secondaryColor: '#D97706',
     backgroundColor: '#FFFBEB',
@@ -118,7 +128,7 @@ const DEFAULT_PRESETS: Theme[] = [
     fontFamily: 'Georgia, serif',
   },
   {
-    name: 'Neon',
+    name: '⚡ Neon',
     primaryColor: '#00FFF5',
     secondaryColor: '#FF006E',
     backgroundColor: '#0A0E27',
@@ -130,7 +140,7 @@ const DEFAULT_PRESETS: Theme[] = [
     fontFamily: 'Impact, fantasy',
   },
   {
-    name: 'Pastel Dream',
+    name: '🍰 Pastel Dream',
     primaryColor: '#F472B6',
     secondaryColor: '#A78BFA',
     backgroundColor: '#FDF2F8',
@@ -139,6 +149,192 @@ const DEFAULT_PRESETS: Theme[] = [
     borderRadius: 20,
     shadowIntensity: 3,
     spacing: 13,
+    fontFamily: 'Arial, sans-serif',
+  },
+
+  // 카테고리 2: Material Design (5개)
+  {
+    name: '🔴 Material Red',
+    primaryColor: '#F44336',
+    secondaryColor: '#E91E63',
+    backgroundColor: '#FFEBEE',
+    textColor: '#212121',
+    fontSize: 16,
+    borderRadius: 4,
+    shadowIntensity: 4,
+    spacing: 12,
+    fontFamily: 'Arial, sans-serif',
+  },
+  {
+    name: '🟦 Material Blue',
+    primaryColor: '#2196F3',
+    secondaryColor: '#03A9F4',
+    backgroundColor: '#E3F2FD',
+    textColor: '#212121',
+    fontSize: 16,
+    borderRadius: 4,
+    shadowIntensity: 4,
+    spacing: 12,
+    fontFamily: 'Arial, sans-serif',
+  },
+  {
+    name: '🟩 Material Green',
+    primaryColor: '#4CAF50',
+    secondaryColor: '#8BC34A',
+    backgroundColor: '#F1F8E9',
+    textColor: '#212121',
+    fontSize: 16,
+    borderRadius: 4,
+    shadowIntensity: 4,
+    spacing: 12,
+    fontFamily: 'Arial, sans-serif',
+  },
+  {
+    name: '🟧 Material Orange',
+    primaryColor: '#FF9800',
+    secondaryColor: '#FFC107',
+    backgroundColor: '#FFF3E0',
+    textColor: '#212121',
+    fontSize: 16,
+    borderRadius: 4,
+    shadowIntensity: 4,
+    spacing: 12,
+    fontFamily: 'Arial, sans-serif',
+  },
+  {
+    name: '🟪 Material Purple',
+    primaryColor: '#9C27B0',
+    secondaryColor: '#673AB7',
+    backgroundColor: '#F3E5F5',
+    textColor: '#212121',
+    fontSize: 16,
+    borderRadius: 4,
+    shadowIntensity: 4,
+    spacing: 12,
+    fontFamily: 'Arial, sans-serif',
+  },
+
+  // 카테고리 3: Dark Mode (5개)
+  {
+    name: '⬛ Dark Slate',
+    primaryColor: '#64748B',
+    secondaryColor: '#475569',
+    backgroundColor: '#0F172A',
+    textColor: '#F1F5F9',
+    fontSize: 16,
+    borderRadius: 6,
+    shadowIntensity: 6,
+    spacing: 12,
+    fontFamily: 'Courier New, monospace',
+  },
+  {
+    name: '🖤 Dark Charcoal',
+    primaryColor: '#60A5FA',
+    secondaryColor: '#3B82F6',
+    backgroundColor: '#1F2937',
+    textColor: '#F3F4F6',
+    fontSize: 16,
+    borderRadius: 8,
+    shadowIntensity: 8,
+    spacing: 12,
+    fontFamily: 'Arial, sans-serif',
+  },
+  {
+    name: '💚 Dark Green',
+    primaryColor: '#10B981',
+    secondaryColor: '#059669',
+    backgroundColor: '#111827',
+    textColor: '#F3F4F6',
+    fontSize: 16,
+    borderRadius: 8,
+    shadowIntensity: 8,
+    spacing: 12,
+    fontFamily: 'Arial, sans-serif',
+  },
+  {
+    name: '🔥 Dark Fire',
+    primaryColor: '#EF4444',
+    secondaryColor: '#DC2626',
+    backgroundColor: '#1F2937',
+    textColor: '#F3F4F6',
+    fontSize: 16,
+    borderRadius: 6,
+    shadowIntensity: 8,
+    spacing: 12,
+    fontFamily: 'Arial, sans-serif',
+  },
+  {
+    name: '✨ Dark Minimal',
+    primaryColor: '#FFFFFF',
+    secondaryColor: '#E5E7EB',
+    backgroundColor: '#000000',
+    textColor: '#F3F4F6',
+    fontSize: 16,
+    borderRadius: 4,
+    shadowIntensity: 10,
+    spacing: 12,
+    fontFamily: 'Arial, sans-serif',
+  },
+
+  // 카테고리 4: Tailwind Colors (5개)
+  {
+    name: '💚 Tailwind Emerald',
+    primaryColor: '#10B981',
+    secondaryColor: '#34D399',
+    backgroundColor: '#F0FDF4',
+    textColor: '#064E3B',
+    fontSize: 16,
+    borderRadius: 8,
+    shadowIntensity: 3,
+    spacing: 12,
+    fontFamily: 'Arial, sans-serif',
+  },
+  {
+    name: '💙 Tailwind Cyan',
+    primaryColor: '#06B6D4',
+    secondaryColor: '#22D3EE',
+    backgroundColor: '#F0F9FB',
+    textColor: '#164E63',
+    fontSize: 16,
+    borderRadius: 8,
+    shadowIntensity: 3,
+    spacing: 12,
+    fontFamily: 'Arial, sans-serif',
+  },
+  {
+    name: '💜 Tailwind Violet',
+    primaryColor: '#7C3AED',
+    secondaryColor: '#A78BFA',
+    backgroundColor: '#F5F3FF',
+    textColor: '#4C1D95',
+    fontSize: 16,
+    borderRadius: 8,
+    shadowIntensity: 3,
+    spacing: 12,
+    fontFamily: 'Arial, sans-serif',
+  },
+  {
+    name: '❤️ Tailwind Rose',
+    primaryColor: '#FB7185',
+    secondaryColor: '#F472B6',
+    backgroundColor: '#FFF1F2',
+    textColor: '#831843',
+    fontSize: 16,
+    borderRadius: 8,
+    shadowIntensity: 3,
+    spacing: 12,
+    fontFamily: 'Arial, sans-serif',
+  },
+  {
+    name: '⭐ Tailwind Amber',
+    primaryColor: '#F59E0B',
+    secondaryColor: '#FBBF24',
+    backgroundColor: '#FFFBEB',
+    textColor: '#78350F',
+    fontSize: 16,
+    borderRadius: 8,
+    shadowIntensity: 3,
+    spacing: 12,
     fontFamily: 'Arial, sans-serif',
   },
 ];
@@ -214,6 +410,8 @@ export default function ThemeGenerator() {
   const [livePreviewActive, setLivePreviewActive] = useState<boolean>(false);
   const [presets, setPresets] = useState<Theme[]>(DEFAULT_PRESETS);
   const [iframeLoadState, setIframeLoadState] = useState<IframeLoadState>('idle');
+  const [metadata, setMetadata] = useState<LoadMetadata | null>(null);
+  const [showCopySuccess, setShowCopySuccess] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // CSS 코드 생성
@@ -376,6 +574,16 @@ export default function ThemeGenerator() {
 
       console.log('✅ HTML received, size:', data.html?.length);
       
+      // 메타데이터 저장
+      setMetadata(data.metadata);
+      
+      // iframe이 차단되었으면 에러 상태로
+      if (data.metadata?.iframeBlocked) {
+        console.warn('❌ iframe blocked:', data.metadata?.blockReason);
+        setIframeLoadState('error');
+        return;
+      }
+      
       // HTML을 상태에 저장
       setPendingHtml(data.html);
       // 나중에 useEffect에서 iframe에 주입됨
@@ -420,6 +628,17 @@ export default function ThemeGenerator() {
     const randomTheme = presets[Math.floor(Math.random() * presets.length)];
     handleThemeSelect(randomTheme);
   }, [presets, handleThemeSelect]);
+
+  // CSS 복사 기능
+  const handleCopyCss = useCallback(() => {
+    navigator.clipboard.writeText(cssCode).then(() => {
+      setShowCopySuccess(true);
+      setTimeout(() => setShowCopySuccess(false), 1500);
+    }).catch((err) => {
+      console.error('클립보드 복사 실패:', err);
+      alert('클립보드 복사에 실패했습니다.');
+    });
+  }, [cssCode]);
 
   return (
     <div className="w-screen h-screen bg-gray-100 flex overflow-hidden">
@@ -474,7 +693,19 @@ export default function ThemeGenerator() {
           {/* CSS Code Preview */}
           {!livePreviewActive && (
             <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 flex-shrink-0">
-              <h3 className="text-xs font-bold mb-2 text-gray-800">Generated CSS</h3>
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-xs font-bold text-gray-800">Generated CSS</h3>
+                <button
+                  onClick={handleCopyCss}
+                  className={`text-xs px-2 py-1 rounded font-semibold transition-all ${
+                    showCopySuccess
+                      ? 'bg-green-500 text-white'
+                      : 'bg-blue-500 hover:bg-blue-600 text-white'
+                  }`}
+                >
+                  {showCopySuccess ? '✅ Copied!' : '📋 Copy'}
+                </button>
+              </div>
               <pre className="bg-gray-900 text-green-400 p-2 rounded overflow-x-auto text-xs leading-relaxed max-h-48 overflow-y-auto font-mono">
                 <code>{cssCode.substring(0, 400)}...</code>
               </pre>
@@ -625,29 +856,86 @@ export default function ThemeGenerator() {
 
               {/* Error State */}
               {iframeLoadState === 'error' && (
-                <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-red-50 to-orange-50">
-                  <div className="text-center px-6 max-w-md">
+                <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-yellow-50 to-orange-50">
+                  <div className="text-center px-6 max-w-lg">
                     <div className="text-5xl mb-4">⚠️</div>
-                    <p className="text-gray-800 font-bold text-lg mb-2">Unable to Load Website</p>
-                    <p className="text-sm text-gray-600 mb-4">
-                      This could be due to:
-                    </p>
-                    <ul className="text-xs text-gray-600 text-left bg-yellow-100 rounded-lg p-3 mb-4 space-y-1">
-                      <li>✗ Website took too long to respond (10s timeout)</li>
-                      <li>✗ Server returned an error</li>
-                      <li>✗ Network connectivity issue</li>
-                    </ul>
-                    <p className="text-xs text-gray-500 bg-blue-100 rounded-lg p-3">
-                      💡 Try: google.com, wikipedia.org, or your own website
-                    </p>
+                    
+                    {metadata?.iframeBlocked ? (
+                      <>
+                        <p className="text-gray-800 font-bold text-lg mb-2">
+                          이 사이트는 iframe을 지원하지 않습니다
+                        </p>
+                        {metadata?.blockReason && (
+                          <p className="text-xs text-gray-600 bg-yellow-100 border border-yellow-300 rounded-lg p-3 mb-4 font-mono">
+                            원인: <strong>{metadata.blockReason}</strong>
+                          </p>
+                        )}
+                        <p className="text-sm text-gray-700 mb-4">
+                          이는 보안 정책으로 인한 것으로, 우회할 수 없습니다. 대신 다른 사이트를 시도해보세요.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-gray-800 font-bold text-lg mb-2">웹사이트 로드 실패</p>
+                        <p className="text-sm text-gray-600 mb-4">
+                          다음 중 하나의 이유로 실패했을 수 있습니다:
+                        </p>
+                        <ul className="text-xs text-gray-600 text-left bg-yellow-100 rounded-lg p-3 mb-4 space-y-1">
+                          <li>✗ 웹사이트 응답 시간 초과 (10초)</li>
+                          <li>✗ 서버 에러 발생</li>
+                          <li>✗ 네트워크 연결 문제</li>
+                          <li>✗ URL 형식 오류</li>
+                        </ul>
+                      </>
+                    )}
+                    
+                    <div className="text-left bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                      <p className="text-xs font-semibold mb-3 text-blue-900">✅ 작동하는 사이트 시도:</p>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-blue-800">
+                        <button
+                          onClick={() => {
+                            setTargetUrl('google.com');
+                          }}
+                          className="text-left hover:underline hover:text-blue-600 transition-all"
+                        >
+                          • google.com
+                        </button>
+                        <button
+                          onClick={() => {
+                            setTargetUrl('wikipedia.org');
+                          }}
+                          className="text-left hover:underline hover:text-blue-600 transition-all"
+                        >
+                          • wikipedia.org
+                        </button>
+                        <button
+                          onClick={() => {
+                            setTargetUrl('github.com');
+                          }}
+                          className="text-left hover:underline hover:text-blue-600 transition-all"
+                        >
+                          • github.com
+                        </button>
+                        <button
+                          onClick={() => {
+                            setTargetUrl('example.com');
+                          }}
+                          className="text-left hover:underline hover:text-blue-600 transition-all"
+                        >
+                          • example.com
+                        </button>
+                      </div>
+                    </div>
+                    
                     <button
                       onClick={() => {
                         setIframeLoadState('idle');
                         setTargetUrl('');
+                        setMetadata(null);
                       }}
-                      className="mt-4 bg-gray-600 hover:bg-gray-700 text-white text-xs px-4 py-2 rounded transition-all"
+                      className="w-full bg-gray-600 hover:bg-gray-700 text-white text-xs px-4 py-2 rounded transition-all font-semibold"
                     >
-                      Try Another URL
+                      다른 URL 시도하기
                     </button>
                   </div>
                 </div>

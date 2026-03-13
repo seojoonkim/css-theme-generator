@@ -31,19 +31,75 @@ function convertRelativeToAbsolutePaths(html: string, baseUrl: string): string {
     return `srcset="${origin}/${path}"`;
   });
 
-  // 4. url(/...) in style attributes
+  // 4. url(/...) in style attributes (인라인 style 태그 등)
   result = result.replace(/url\(["']?\/([^"')]+)["']?\)/g, (match, path) => {
     return `url('${origin}/${path}')`;
   });
 
-  // 5. data: URIs with src="data:..." should be kept as-is (already absolute)
-  // 6. protocol-relative URLs src="//..." should become "https://..."
+  // 5. CSS 배경이미지 속성 변환
+  // background-image: url(/path/to/image.jpg)
+  result = result.replace(/background-image:\s*url\(["']?\/([^"')]+)["']?\)/g, 
+    (match, path) => {
+      return `background-image: url('${origin}/${path}')`;
+    });
+
+  // 6. @import url() 변환
+  result = result.replace(/@import\s+url\(["']?\/([^"')]+)["']?\)/g,
+    (match, path) => {
+      return `@import url('${origin}/${path}')`;
+    });
+
+  // 7. data: URIs with src="data:..." should be kept as-is (already absolute)
+  
+  // 8. protocol-relative URLs src="//..." should become "https://..."
   result = result.replace(/src=["']\/\/([^"']+)["']/g, (match, path) => {
     return `src="https://${path}"`;
   });
 
   result = result.replace(/href=["']\/\/([^"']+)["']/g, (match, path) => {
     return `href="https://${path}"`;
+  });
+
+  // 9. protocol-relative URLs for srcset
+  result = result.replace(/srcset=["']\/\/([^"']+)["']/g, (match, path) => {
+    return `srcset="https://${path}"`;
+  });
+
+  // 10. background 속성 (단축형)
+  // background: url(/path/to/image.jpg)
+  result = result.replace(/background:\s*url\(["']?\/([^"')]+)["']?\)/g, 
+    (match, path) => {
+      return `background: url('${origin}/${path}')`;
+    });
+
+  // 11. srcset 속성의 상대 경로
+  // srcset="./image1.jpg 1x, ./image2.jpg 2x"
+  result = result.replace(/srcset=["']([^"']+)["']/g, (match, srcsetValue) => {
+    const converted = srcsetValue
+      .split(',')
+      .map(item => {
+        const parts = item.trim().split(/\s+/);
+        const url = parts[0];
+        const descriptor = parts.slice(1).join(' ');
+        
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          return item; // 이미 절대 경로
+        }
+        
+        if (url.startsWith('/')) {
+          return `${origin}/${url.slice(1)}${descriptor ? ' ' + descriptor : ''}`;
+        }
+        
+        if (url.startsWith('//')) {
+          return `https:${url}${descriptor ? ' ' + descriptor : ''}`;
+        }
+        
+        // 상대 경로 (./image.jpg)
+        return `${origin}/${url.replace(/^\.\//, '')}${descriptor ? ' ' + descriptor : ''}`;
+      })
+      .join(', ');
+    
+    return `srcset="${converted}"`;
   });
 
   return result;
@@ -123,6 +179,27 @@ export async function POST(request: NextRequest) {
       const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
       const title = titleMatch ? titleMatch[1] : 'Untitled';
 
+      // 🔍 응답 헤더 분석 (iframe 호환성 확인)
+      const xFrameOptions = response.headers.get('x-frame-options');
+      const csp = response.headers.get('content-security-policy');
+      const contentSecurityPolicyReportOnly = response.headers.get('content-security-policy-report-only');
+
+      // iframe 차단 여부 판단
+      let iframeBlocked = false;
+      let blockReason = '';
+      
+      if (xFrameOptions?.toUpperCase() === 'DENY') {
+        iframeBlocked = true;
+        blockReason = 'X-Frame-Options: DENY';
+      } else if (xFrameOptions?.toUpperCase() === 'SAMEORIGIN') {
+        // SAMEORIGIN은 다른 도메인에서는 차단
+        iframeBlocked = true;
+        blockReason = 'X-Frame-Options: SAMEORIGIN (다른 도메인)';
+      } else if (csp && csp.includes('frame-ancestors')) {
+        iframeBlocked = true;
+        blockReason = 'CSP: frame-ancestors 제한';
+      }
+
       // 로딩 성공 응답
       return NextResponse.json(
         {
@@ -132,6 +209,10 @@ export async function POST(request: NextRequest) {
             url: url,
             title,
             contentType,
+            iframeBlocked,
+            blockReason,
+            xFrameOptions: xFrameOptions || 'not-set',
+            cspPresent: !!csp,
             loadTime: Date.now(),
           },
         },
