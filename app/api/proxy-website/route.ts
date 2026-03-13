@@ -3,8 +3,56 @@ import { NextRequest, NextResponse } from 'next/server';
 export const maxDuration = 15;
 
 /**
+ * 상대 경로를 절대 경로로 변환
+ * @param html - 원본 HTML
+ * @param baseUrl - 기본 URL (예: https://google.com)
+ * @returns 변환된 HTML
+ */
+function convertRelativeToAbsolutePaths(html: string, baseUrl: string): string {
+  // baseUrl에서 도메인만 추출 (예: https://google.com)
+  const baseUri = new URL(baseUrl);
+  const origin = baseUri.origin;
+
+  // 상대 경로 패턴들을 정규식으로 변환
+  let result = html;
+
+  // 1. src="/..." → src="https://domain..."
+  result = result.replace(/src=["']\/([^"']+)["']/g, (match, path) => {
+    return `src="${origin}/${path}"`;
+  });
+
+  // 2. href="/..." → href="https://domain..."
+  result = result.replace(/href=["']\/([^"']+)["']/g, (match, path) => {
+    return `href="${origin}/${path}"`;
+  });
+
+  // 3. srcset="/..." → srcset="https://domain..."
+  result = result.replace(/srcset=["']\/([^"']+)["']/g, (match, path) => {
+    return `srcset="${origin}/${path}"`;
+  });
+
+  // 4. url(/...) in style attributes
+  result = result.replace(/url\(["']?\/([^"')]+)["']?\)/g, (match, path) => {
+    return `url('${origin}/${path}')`;
+  });
+
+  // 5. data: URIs with src="data:..." should be kept as-is (already absolute)
+  // 6. protocol-relative URLs src="//..." should become "https://..."
+  result = result.replace(/src=["']\/\/([^"']+)["']/g, (match, path) => {
+    return `src="https://${path}"`;
+  });
+
+  result = result.replace(/href=["']\/\/([^"']+)["']/g, (match, path) => {
+    return `href="https://${path}"`;
+  });
+
+  return result;
+}
+
+/**
  * 프록시 API: 웹사이트 HTML 가져오기
  * - 서버사이드 CORS 우회
+ * - 상대 경로 → 절대 경로 변환
  * - 타임아웃 처리
  * - 에러 핸들링
  */
@@ -65,8 +113,11 @@ export async function POST(request: NextRequest) {
       }
 
       // HTML 파싱 및 메타데이터 추출
-      const html = await response.text();
+      let html = await response.text();
       const contentType = response.headers.get('content-type') || 'text/html';
+
+      // ✅ 상대 경로를 절대 경로로 변환
+      html = convertRelativeToAbsolutePaths(html, url);
 
       // 기본 메타데이터 추출
       const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
