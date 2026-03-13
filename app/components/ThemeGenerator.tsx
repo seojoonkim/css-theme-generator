@@ -413,11 +413,27 @@ export default function ThemeGenerator() {
   const [metadata, setMetadata] = useState<LoadMetadata | null>(null);
   const [showCopySuccess, setShowCopySuccess] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  
+  // 🆕 Puppeteer 스크린샷 상태
+  const [puppeteerScreenshot, setPuppeteerScreenshot] = useState<string | null>(null);
+  const [puppeteerLoading, setPuppeteerLoading] = useState(false);
+  const [usePuppeteer, setUsePuppeteer] = useState(false);
 
   // CSS 코드 생성
   useEffect(() => {
     setCssCode(generateCSSCode(currentTheme));
   }, [currentTheme]);
+
+  // 🆕 테마 변경 시 Puppeteer 스크린샷 자동 업데이트
+  useEffect(() => {
+    if (puppeteerScreenshot && targetUrl.trim()) {
+      // 테마 변경 후 500ms 대기, 자동으로 스크린샷 재생성
+      const timer = setTimeout(() => {
+        generatePuppeteerScreenshot();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [currentTheme, puppeteerScreenshot, targetUrl]);
 
   // 테마 변경 시 iframe에 CSS 주입 (contentDocument 직접 접근)
   const injectCssToIframe = useCallback((theme: Theme) => {
@@ -594,6 +610,59 @@ export default function ThemeGenerator() {
     }
   }, [targetUrl]);
 
+  // 🆕 Puppeteer 스크린샷 생성
+  const generatePuppeteerScreenshot = useCallback(async () => {
+    if (!targetUrl.trim()) {
+      alert('Please enter a target URL');
+      return;
+    }
+
+    let finalUrl = targetUrl.trim();
+    if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+      finalUrl = 'https://' + finalUrl;
+    }
+
+    setPuppeteerLoading(true);
+    setPuppeteerScreenshot(null);
+
+    try {
+      console.log('📸 Generating Puppeteer screenshot for:', finalUrl);
+      
+      const response = await fetch('/api/screenshot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: finalUrl,
+          css: cssCode,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Puppeteer error:', errorData);
+        alert(`Puppeteer error: ${errorData.error}`);
+        return;
+      }
+
+      const data = await response.json();
+      if (!data.success || !data.image) {
+        console.error('❌ Puppeteer failed');
+        alert('Failed to generate screenshot');
+        return;
+      }
+
+      console.log('✅ Screenshot generated');
+      setPuppeteerScreenshot(data.image);
+    } catch (error) {
+      console.error('❌ Puppeteer request failed:', error);
+      alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setPuppeteerLoading(false);
+    }
+  }, [targetUrl, cssCode]);
+
   // iframe 로드 완료 시
   const handleIframeLoad = useCallback(() => {
     try {
@@ -668,6 +737,16 @@ export default function ThemeGenerator() {
               >
                 Load Website
               </button>
+              
+              {/* 🆕 Puppeteer 스크린샷 버튼 */}
+              <button
+                onClick={generatePuppeteerScreenshot}
+                disabled={puppeteerLoading}
+                className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white font-bold py-1 px-2 rounded text-xs transition-all"
+              >
+                {puppeteerLoading ? '📸 Generating...' : '📸 Puppeteer Shot'}
+              </button>
+              
               {livePreviewActive && (
                 <button
                   onClick={() => {
@@ -941,8 +1020,25 @@ export default function ThemeGenerator() {
                 </div>
               )}
 
+              {/* 🆕 Puppeteer 스크린샷 표시 */}
+              {puppeteerScreenshot && (
+                <div className="flex-1 overflow-auto bg-gray-900 flex items-center justify-center p-4 relative">
+                  <img
+                    src={puppeteerScreenshot}
+                    alt="Puppeteer Screenshot"
+                    className="max-w-full max-h-full border-2 border-gray-700 rounded shadow-lg"
+                  />
+                  <button
+                    onClick={() => setPuppeteerScreenshot(null)}
+                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+
               {/* Success State - Single iframe */}
-              {iframeLoadState === 'success' && (
+              {iframeLoadState === 'success' && !puppeteerScreenshot && (
                 <div className="flex-1 overflow-hidden relative">
                   <iframe
                     ref={setIframeRef}
